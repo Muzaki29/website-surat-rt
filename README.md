@@ -1,36 +1,319 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SuratRT
 
-## Getting Started
+Platform digital manajemen **RT 005 / RW 002 Kampung Makasar**, Jakarta Timur — layanan surat online, iuran, forum warga, polling, dan panel admin pengurus RT.
 
-First, run the development server:
+**Repository:** [github.com/Muzaki29/website-surat-rt](https://github.com/Muzaki29/website-surat-rt)
+
+---
+
+## Daftar Isi
+
+1. [Fitur](#fitur)
+2. [Tech Stack](#tech-stack)
+3. [Persyaratan](#persyaratan)
+4. [Instalasi](#instalasi)
+5. [Variabel Lingkungan](#variabel-lingkungan)
+6. [Akun Demo](#akun-demo)
+7. [Konfigurasi RT](#konfigurasi-rt)
+8. [Panduan Warga](#panduan-warga)
+9. [Panduan Pengurus RT](#panduan-pengurus-rt)
+10. [Alur Bisnis Singkat](#alur-bisnis-singkat)
+11. [Modul & URL](#modul--url)
+12. [Scripts](#scripts)
+13. [Deploy Produksi](#deploy-produksi)
+14. [Backup & Keamanan](#backup--keamanan)
+15. [Troubleshooting](#troubleshooting)
+16. [Dokumentasi Lengkap](#dokumentasi-lengkap)
+
+---
+
+## Fitur
+
+| Area | Keterangan |
+|------|------------|
+| **Layanan Surat** | Pengajuan online, lacak status, surat masuk/keluar, arsip, PDF surat keluar |
+| **Keuangan** | Tagihan iuran, konfirmasi pembayaran, buku kas RT |
+| **Komunitas** | Registrasi warga, forum diskusi, polling RT, pengumuman |
+| **Dukungan** | FAQ, tiket support ke pengurus |
+| **Admin** | Dashboard, monitoring, analitik, verifikasi warga & pengajuan |
+| **Auth** | Login NIK/email, peran warga & pengurus (NextAuth v5) |
+
+---
+
+## Tech Stack
+
+| Lapisan | Teknologi |
+|---------|-----------|
+| Framework | Next.js 16 (App Router) |
+| UI | React 19, Tailwind CSS v4, Lucide Icons |
+| Database | SQLite + Prisma ORM |
+| Auth | NextAuth.js v5 (Credentials) |
+| PDF | pdf-lib |
+| Pembayaran | Midtrans (opsional, sandbox) |
+
+---
+
+## Persyaratan
+
+- **Node.js** 20 atau lebih baru
+- **npm** 10+
+- Browser modern (Chrome, Firefox, Safari, Edge)
+
+---
+
+## Instalasi
+
+### 1. Clone repository
+
+```bash
+git clone https://github.com/Muzaki29/website-surat-rt.git
+cd website-surat-rt
+```
+
+### 2. Install dependensi
+
+```bash
+npm install
+```
+
+### 3. Siapkan environment
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` — minimal isi `DATABASE_URL` dan `AUTH_SECRET` (lihat [Variabel Lingkungan](#variabel-lingkungan)).
+
+### 4. Inisialisasi database
+
+```bash
+npm run db:setup
+```
+
+Perintah ini menjalankan `prisma db push` + seed akun demo dan data awal.
+
+### 5. Jalankan development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+> **Catatan:** Setelah mengubah schema Prisma, hentikan dev server, jalankan `npm run db:setup`, lalu start ulang `npm run dev`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Variabel Lingkungan
 
-To learn more about Next.js, take a look at the following resources:
+| Variabel | Wajib | Keterangan |
+|----------|-------|------------|
+| `DATABASE_URL` | Ya | SQLite: `file:./dev.db` |
+| `AUTH_SECRET` | Ya | String acak min. 32 karakter untuk NextAuth |
+| `AUTH_URL` | Ya (prod) | URL publik, mis. `https://rt-kampung-makasar.id` |
+| `MIDTRANS_*` | Tidak | Kunci Midtrans jika pembayaran Snap aktif |
+| `WHATSAPP_*` | Tidak | API notifikasi WhatsApp (opsional) |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+File `.env` **jangan** di-commit ke Git.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Akun Demo
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Setelah `npm run db:setup`:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Peran | Email | Password |
+|-------|-------|----------|
+| Admin | `admin@rt001.local` | `admin123` |
+| Sekretaris RT | `sekretaris@rt001.local` | `sekretaris123` |
+| Bendahara RT | `bendahara@rt001.local` | `bendahara123` |
+
+**Warga:** daftar mandiri di `/daftar` → diverifikasi pengurus di `/admin/warga` → login dengan NIK atau email.
+
+> Ganti password demo sebelum deploy produksi.
+
+---
+
+## Konfigurasi RT
+
+| File | Isi |
+|------|-----|
+| `src/lib/constants.ts` | Nama RT, alamat, kontak, rekening, navigasi |
+| `src/data/jenis-surat.ts` | Katalog layanan surat & estimasi hari kerja |
+| `src/data/faq.ts` | Pertanyaan umum halaman bantuan |
+
+Contoh data RT saat ini: **RT 005 / RW 002, Kampung Makasar, Kelurahan Makasar, Jakarta Timur**.
+
+---
+
+## Panduan Warga
+
+### Registrasi & login
+
+1. Buka `/daftar` — isi NIK, nama, alamat, HP, email, password.
+2. Tunggu verifikasi pengurus RT (status `menunggu-verifikasi`).
+3. Setelah aktif, masuk di `/login` dengan **NIK** atau **email**.
+4. Warga yang sudah login diarahkan ke **Forum** (`/forum`).
+
+### Ajukan surat
+
+1. Menu **Layanan Surat** → pilih jenis surat.
+2. Isi formulir pengajuan.
+3. Simpan **ID pengajuan**.
+4. Lacak progres di **Cek Status** (`/status` atau `/status/[id]`).
+
+### Bayar iuran
+
+1. Buka `/pembayaran`.
+2. Masukkan NIK untuk melihat tagihan.
+3. Transfer ke rekening RT atau bayar via Midtrans (jika dikonfigurasi).
+4. Upload/kirim bukti — bendahara konfirmasi di admin.
+
+### Fitur lain
+
+| Halaman | Fungsi |
+|---------|--------|
+| `/pengumuman` | Pengumuman resmi RT |
+| `/polling` | Voting keputusan RT |
+| `/forum` | Diskusi antar warga |
+| `/bantuan` | FAQ & tiket support |
+
+---
+
+## Panduan Pengurus RT
+
+1. Masuk di `/login` dengan akun pengurus.
+2. Panel admin: `/admin`
+
+### Tugas harian
+
+| Modul | URL | Tugas |
+|-------|-----|-------|
+| Pengajuan Warga | `/admin/pengajuan` | Review, setujui/tolak, proses surat |
+| Surat Masuk/Keluar | `/admin/surat-masuk`, `/admin/surat-keluar` | Catat & terbitkan surat |
+| Data Warga | `/admin/warga` | CRUD warga, **verifikasi pendaftar baru** |
+| Iuran | `/admin/iuran` | Terbitkan tagihan, konfirmasi bayar |
+| Kas RT | `/admin/kas` | Catat pemasukan/pengeluaran |
+| Pengumuman | `/admin/pengumuman` | Publikasikan info ke warga |
+| Polling | `/admin/polling` | Buat & kelola voting |
+| Arsip | `/admin/arsip` | Pencarian surat terpadu |
+| Support | `/admin/support` | Balas tiket warga |
+| Monitoring & Analitik | `/admin/monitoring`, `/admin/analitik` | Ringkasan operasional |
+
+---
+
+## Alur Bisnis Singkat
+
+```
+Warga → Daftar / Ajukan Surat / Bayar Iuran / Forum / Bantuan
+                    ↓
+         Pengurus RT (verifikasi & kelola)
+                    ↓
+    Surat selesai · Iuran lunas · Akun aktif · Arsip tersimpan
+```
+
+Detail diagram dan status tiap langkah: [docs/ALUR-BISNIS.md](docs/ALUR-BISNIS.md)
+
+---
+
+## Modul & URL
+
+### Halaman publik
+
+| URL | Deskripsi |
+|-----|-----------|
+| `/` | Beranda |
+| `/layanan` | Daftar layanan surat |
+| `/layanan/[slug]` | Formulir pengajuan |
+| `/status` | Lacak pengajuan |
+| `/pembayaran` | Cek & bayar iuran |
+| `/daftar` | Registrasi warga |
+| `/login` | Masuk warga & pengurus |
+| `/forum` | Forum diskusi |
+| `/polling` | Polling RT |
+| `/pengumuman` | Pengumuman publik |
+| `/bantuan` | FAQ & support |
+
+### Panel admin
+
+Semua di bawah `/admin/*` — dilindungi middleware auth (hanya peran pengurus).
+
+---
+
+## Scripts
+
+```bash
+npm run dev          # Server development (port 3000)
+npm run build        # Build produksi
+npm run start        # Jalankan build produksi
+npm run lint         # ESLint
+npm run db:generate  # Generate Prisma client
+npm run db:push      # Sinkronkan schema ke database
+npm run db:seed      # Seed akun demo & data awal
+npm run db:setup     # db:push + db:seed (disarankan saat setup awal)
+```
+
+---
+
+## Deploy Produksi
+
+### Build lokal
+
+```bash
+npm run build
+npm run start
+```
+
+### Checklist sebelum go-live
+
+- [ ] Ganti semua password demo
+- [ ] Set `AUTH_SECRET` dan `AUTH_URL` di hosting
+- [ ] Backup database SQLite (`prisma/dev.db`) atau migrasi ke PostgreSQL
+- [ ] Konfigurasi domain & HTTPS
+- [ ] Uji alur: daftar warga → verifikasi → pengajuan surat → bayar iuran
+- [ ] Rotasi kredensial Midtrans/WhatsApp jika dipakai
+
+Panduan detail deploy, backup, dan checklist maintenance: [docs/PANDUAN-MAINTENANCE.md](docs/PANDUAN-MAINTENANCE.md)
+
+---
+
+## Backup & Keamanan
+
+| Data | Lokasi | Frekuensi backup |
+|------|--------|------------------|
+| Database SQLite | `prisma/dev.db` | Mingguan (prod: harian) |
+| Upload / JSON legacy | `data/db/*.json` | Mingguan |
+
+- Jangan commit `.env` atau database ke Git.
+- Gunakan password manager untuk kredensial pengurus.
+- Rotasi password admin setiap 3 bulan.
+
+---
+
+## Troubleshooting
+
+| Masalah | Solusi |
+|---------|--------|
+| Error Prisma `Unknown argument` | Stop dev server → `npm run db:setup` → start ulang |
+| Registrasi gagal / JSON error | Pastikan database sudah di-push; cek log terminal |
+| Login warga ditolak | Akun belum diverifikasi di `/admin/warga` |
+| Build gagal `EPERM` Prisma | Tutup proses `npm run dev` yang masih berjalan |
+| Halaman admin redirect ke login | Pastikan `AUTH_SECRET` terisi di `.env` |
+
+---
+
+## Dokumentasi Lengkap
+
+| Dokumen | Isi |
+|---------|-----|
+| [docs/PANDUAN-PENGGUNA.md](docs/PANDUAN-PENGGUNA.md) | Panduan lengkap warga & pengurus |
+| [docs/PANDUAN-MAINTENANCE.md](docs/PANDUAN-MAINTENANCE.md) | Operasional, deploy, backup |
+| [docs/ALUR-BISNIS.md](docs/ALUR-BISNIS.md) | Diagram alur bisnis & status |
+| [docs/LAPORAN-TEKNOLOGI.md](docs/LAPORAN-TEKNOLOGI.md) | Arsitektur & struktur kode |
+| [docs/AUDIT-UI.md](docs/AUDIT-UI.md) | Catatan audit antarmuka |
+
+---
+
+## Lisensi
+
+Proyek privat untuk keperluan RT — hubungi pengurus RT / maintainer untuk penggunaan di luar lingkungan RT 005 RW 002 Kampung Makasar.

@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("admin")
+  nik       String?  @unique
+  wargaId   String?  @unique
+  createdAt DateTime @default(now())
+}
+
+model Warga {
+  id           String @id
+  nama         String
+  nik          String @unique
+  alamat       String
+  noHp         String
+  status       String
+  tanggalMasuk String
+  userId       String? @unique
+}
+
+model ForumThread {
+  id            String @id
+  judul         String
+  penulisUserId String
+  penulisNama   String
+  createdAt     String
+  updatedAt     String
+}
+
+model ForumMessage {
+  id            String @id
+  threadId      String
+  penulisUserId String
+  penulisNama   String
+  isi           String
+  createdAt     String
+}
+
+model SuratMasuk {
+  id            String @id
+  nomorAgenda   String
+  tanggalTerima String
+  pengirim      String
+  perihal       String
+  status        String
+}
+
+model SuratKeluar {
+  id           String @id
+  nomorSurat   String
+  tanggalSurat String
+  tujuan       String
+  perihal      String
+  status       String
+}
+
+model PengajuanSurat {
+  id           String @id
+  jenisSurat   String
+  namaPemohon  String
+  nik          String
+  alamat       String
+  keperluan    String
+  tanggalAjuan String
+  status       String
+}
+
+model TagihanIuran {
+  id                 String  @id
+  wargaId            String
+  wargaNama          String
+  jenisIuran         String
+  periode            String
+  nominal            Int
+  status             String
+  tanggalBayar       String?
+  metodePembayaran   String?
+  kodeReferensi      String?
+  catatanPembayaran  String?
+  tanggalAjuanBayar  String?
+  midtransOrderId    String?
+}
+
+model TransaksiKas {
+  id         String @id
+  tanggal    String
+  jenis      String
+  kategori   String
+  keterangan String
+  nominal    Int
+}
+
+model Pengumuman {
+  id        String @id
+  judul     String
+  isi       String
+  tanggal   String
+  penulis   String
+  published Boolean @default(false)
+}
+
+model TiketSupport {
+  id             String  @id
+  nama           String
+  kontak         String
+  topik          String
+  pesan          String
+  tanggal        String
+  status         String
+  balasan        String?
+  tanggalBalasan String?
+}
+
+model SuratCounter {
+  id     String @id @default("singleton")
+  keluar Int    @default(0)
+  masuk  Int    @default(0)
+}
+
+model Polling {
+  id             String @id
+  judul          String
+  deskripsi      String
+  tanggalMulai   String
+  tanggalSelesai String
+  status         String
+  opsiJson       String
+}
+
+model PaymentLog {
+  id             String @id
+  tagihanId      String
+  orderId        String @unique
+  grossAmount    Int
+  status         String
+  paymentType    String?
+  transactionId  String?
+  createdAt      String
+}
