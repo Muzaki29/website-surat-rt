@@ -1,9 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import {
+  BulkActionBar,
+  BulkSelectAll,
+  BulkSelectRow,
+  useBulkDeleteHandler,
+} from "@/components/admin/BulkActions";
 import { Badge } from "@/components/ui/Badge";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import type { StatusWarga, Warga } from "@/lib/types";
 
 const emptyForm = {
@@ -31,6 +38,16 @@ export function WargaManager() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const allIds = useMemo(() => warga.map((w) => w.id), [warga]);
+  const bulk = useBulkSelection(allIds);
+  const { deleting, handleBulkDelete } = useBulkDeleteHandler({
+    resource: "warga",
+    selectedIds: bulk.selectedIds,
+    itemLabel: "warga",
+    clear: bulk.clear,
+    onSuccess: load,
+  });
 
   function openCreate() {
     setEditId(null);
@@ -142,6 +159,14 @@ export function WargaManager() {
         </form>
       )}
 
+      <BulkActionBar
+        count={bulk.selectedCount}
+        itemLabel="warga"
+        deleting={deleting}
+        onClear={bulk.clear}
+        onDelete={handleBulkDelete}
+      />
+
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
           <p className="p-6 text-sm text-slate-500">Memuat data...</p>
@@ -154,6 +179,13 @@ export function WargaManager() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-slate-100 bg-slate-50 text-slate-600">
               <tr>
+                <th className="w-10 px-4 py-3">
+                  <BulkSelectAll
+                    checked={bulk.allSelected}
+                    indeterminate={bulk.someSelected}
+                    onChange={bulk.toggleAll}
+                  />
+                </th>
                 <th className="px-4 py-3 font-medium">Nama</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">NIK</th>
                 <th className="hidden px-4 py-3 font-medium lg:table-cell">No. HP</th>
@@ -164,6 +196,13 @@ export function WargaManager() {
             <tbody className="divide-y divide-slate-100">
               {warga.map((w) => (
                 <tr key={w.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <BulkSelectRow
+                      checked={bulk.isSelected(w.id)}
+                      onChange={() => bulk.toggle(w.id)}
+                      label={w.nama}
+                    />
+                  </td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-slate-900">{w.nama}</p>
                     <p className="text-xs text-slate-500 md:hidden">{w.nik}</p>

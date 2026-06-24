@@ -1,10 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import {
+  BulkActionBar,
+  BulkSelectAll,
+  BulkSelectRow,
+  useBulkDeleteHandler,
+} from "@/components/admin/BulkActions";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { JENIS_SURAT } from "@/data/jenis-surat";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { bulkDeleteRequest } from "@/lib/bulk-client";
 import type { PengajuanSurat } from "@/lib/types";
 
 export function PengajuanManager() {
@@ -21,12 +30,28 @@ export function PengajuanManager() {
     load();
   }, [load]);
 
+  const allIds = useMemo(() => items.map((p) => p.id), [items]);
+  const bulk = useBulkSelection(allIds);
+  const { deleting, handleBulkDelete } = useBulkDeleteHandler({
+    resource: "pengajuan",
+    selectedIds: bulk.selectedIds,
+    itemLabel: "pengajuan",
+    clear: bulk.clear,
+    onSuccess: load,
+  });
+
   async function updateStatus(id: string, status: PengajuanSurat["status"]) {
     await fetch("/api/pengajuan", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, status }),
     });
+    load();
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Hapus pengajuan ini?")) return;
+    await bulkDeleteRequest("pengajuan", [id]);
     load();
   }
 
@@ -41,6 +66,14 @@ export function PengajuanManager() {
         description="Verifikasi pengajuan surat online dari warga RT."
       />
 
+      <BulkActionBar
+        count={bulk.selectedCount}
+        itemLabel="pengajuan"
+        deleting={deleting}
+        onClear={bulk.clear}
+        onDelete={handleBulkDelete}
+      />
+
       <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
         {loading ? (
           <p className="p-6 text-sm text-[var(--color-text-muted)]">Memuat pengajuan...</p>
@@ -50,6 +83,13 @@ export function PengajuanManager() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]">
               <tr>
+                <th className="w-10 px-4 py-3">
+                  <BulkSelectAll
+                    checked={bulk.allSelected}
+                    indeterminate={bulk.someSelected}
+                    onChange={bulk.toggleAll}
+                  />
+                </th>
                 <th className="px-4 py-3 font-medium">Pemohon</th>
                 <th className="hidden px-4 py-3 font-medium lg:table-cell">Jenis Surat</th>
                 <th className="px-4 py-3 font-medium">Tanggal</th>
@@ -61,6 +101,13 @@ export function PengajuanManager() {
               {items.map((p) => (
                 <tr key={p.id} className="align-top transition-colors hover:bg-[var(--color-surface-muted)]/60">
                   <td className="px-4 py-3">
+                    <BulkSelectRow
+                      checked={bulk.isSelected(p.id)}
+                      onChange={() => bulk.toggle(p.id)}
+                      label={p.namaPemohon}
+                    />
+                  </td>
+                  <td className="px-4 py-3">
                     <p className="font-medium">{p.namaPemohon}</p>
                     <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">{p.nik}</p>
                     <p className="mt-1 text-xs text-[var(--color-text-subtle)] lg:hidden">{getJenisLabel(p.jenisSurat)}</p>
@@ -71,7 +118,7 @@ export function PengajuanManager() {
                   <td className="px-4 py-3 text-[var(--color-text-muted)]">{p.tanggalAjuan}</td>
                   <td className="px-4 py-3"><Badge status={p.status} /></td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap items-center gap-1">
                       {p.status === "diajukan" && (
                         <Button type="button" size="sm" variant="secondary" onClick={() => updateStatus(p.id, "diproses")}>
                           Proses
@@ -92,6 +139,9 @@ export function PengajuanManager() {
                           Selesai
                         </Button>
                       )}
+                      <Button type="button" size="sm" variant="ghost" onClick={() => handleDelete(p.id)} aria-label="Hapus">
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
                     </div>
                   </td>
                 </tr>

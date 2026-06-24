@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { createId } from "@/lib/id";
+import {
+  computeForumExpiresAt,
+  daysUntilExpiry,
+  maintainForumRetention,
+} from "@/lib/forum-retention";
 import type { ForumThread } from "@/lib/types";
 
 async function requireForumUser() {
@@ -19,14 +24,18 @@ export async function GET() {
   const authResult = await requireForumUser();
   if (authResult.error) return authResult.error;
 
+  await maintainForumRetention();
+
   const threads = await prisma.forumThread.findMany({ orderBy: { updatedAt: "desc" } });
   const enriched: ForumThread[] = await Promise.all(
     threads.map(async (t) => {
-      const last = await prisma.forumMessage.findFirst({
+      const messages = await prisma.forumMessage.findMany({
         where: { threadId: t.id },
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: "asc" },
       });
-      const count = await prisma.forumMessage.count({ where: { threadId: t.id } });
+      const last = messages.at(-1);
+      const first = messages.at(0);
+      const expiresAt = t.expiresAt ?? computeForumExpiresAt(new Date(t.createdAt));
       return {
         id: t.id,
         judul: t.judul,
@@ -34,8 +43,11 @@ export async function GET() {
         penulisNama: t.penulisNama,
         createdAt: t.createdAt,
         updatedAt: t.updatedAt,
+        expiresAt,
+        pesanPembuka: first?.isi,
         pesanTerakhir: last?.isi,
-        jumlahPesan: count,
+        jumlahPesan: messages.length,
+        hariTersisa: daysUntilExpiry(expiresAt),
       };
     }),
   );
@@ -52,13 +64,14 @@ export async function POST(request: Request) {
   const pesanAwal = (body.pesanAwal as string)?.trim();
 
   if (!judul || judul.length < 3) {
-    return NextResponse.json({ error: "Judul topik minimal 3 karakter." }, { status: 400 });
+    return NextResponse.json({ error: "Judul artikel minimal 3 karakter." }, { status: 400 });
   }
-  if (!pesanAwal || pesanAwal.length < 2) {
-    return NextResponse.json({ error: "Pesan awal wajib diisi." }, { status: 400 });
+  if (!pesanAwal || pesanAwal.length < 10) {
+    return NextResponse.json({ error: "Isi pembuka minimal 10 karakter." }, { status: 400 });
   }
 
-  const now = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
   const threadId = createId();
 
   await prisma.$transaction([
@@ -68,8 +81,9 @@ export async function POST(request: Request) {
         judul,
         penulisUserId: authResult.session!.user.id,
         penulisNama: authResult.session!.user.name,
-        createdAt: now,
-        updatedAt: now,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        expiresAt: computeForumExpiresAt(now),
       },
     }),
     prisma.forumMessage.create({
@@ -79,7 +93,7 @@ export async function POST(request: Request) {
         penulisUserId: authResult.session!.user.id,
         penulisNama: authResult.session!.user.name,
         isi: pesanAwal,
-        createdAt: now,
+        createdAt: nowIso,
       },
     }),
   ]);

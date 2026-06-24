@@ -1,11 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Vote } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import {
+  BulkActionBar,
+  BulkCardSelect,
+  BulkSelectAll,
+  useBulkDeleteHandler,
+} from "@/components/admin/BulkActions";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { bulkDeleteRequest } from "@/lib/bulk-client";
 import type { Polling, StatusPolling } from "@/lib/types";
 
 const emptyForm = {
@@ -33,6 +41,16 @@ export function PollingManager() {
     load();
   }, [load]);
 
+  const allIds = useMemo(() => items.map((p) => p.id), [items]);
+  const bulk = useBulkSelection(allIds);
+  const { deleting, handleBulkDelete } = useBulkDeleteHandler({
+    resource: "polling",
+    selectedIds: bulk.selectedIds,
+    itemLabel: "polling",
+    clear: bulk.clear,
+    onSuccess: load,
+  });
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     await fetch("/api/polling", {
@@ -56,7 +74,7 @@ export function PollingManager() {
 
   async function handleDelete(id: string) {
     if (!confirm("Hapus polling ini?")) return;
-    await fetch(`/api/polling?id=${id}`, { method: "DELETE" });
+    await bulkDeleteRequest("polling", [id]);
     load();
   }
 
@@ -139,11 +157,32 @@ export function PollingManager() {
           <p className="mt-3 text-sm text-[var(--color-text-muted)]">Belum ada polling. Buat polling pertama untuk warga RT.</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <>
+          <div className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+            <BulkSelectAll
+              checked={bulk.allSelected}
+              indeterminate={bulk.someSelected}
+              onChange={bulk.toggleAll}
+              label="Pilih semua polling"
+            />
+            <span className="text-sm text-[var(--color-text-muted)]">Pilih semua</span>
+          </div>
+
+          <BulkActionBar
+            count={bulk.selectedCount}
+            itemLabel="polling"
+            deleting={deleting}
+            onClear={bulk.clear}
+            onDelete={handleBulkDelete}
+          />
+
+          <div className="space-y-4">
           {items.map((item) => (
-            <article
+            <BulkCardSelect
               key={item.id}
-              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"
+              checked={bulk.isSelected(item.id)}
+              onChange={() => bulk.toggle(item.id)}
+              label={item.judul}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -192,9 +231,10 @@ export function PollingManager() {
                   );
                 })}
               </div>
-            </article>
+            </BulkCardSelect>
           ))}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

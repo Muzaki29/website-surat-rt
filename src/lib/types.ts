@@ -182,8 +182,28 @@ export interface ForumThread {
   penulisNama: string;
   createdAt: string;
   updatedAt: string;
+  expiresAt: string;
   pesanTerakhir?: string;
+  pesanPembuka?: string;
   jumlahPesan?: number;
+  hariTersisa?: number;
+}
+
+export interface ForumHistoryLog {
+  id: string;
+  threadId: string;
+  judul: string;
+  penulisUserId: string;
+  penulisNama: string;
+  createdAt: string;
+  archivedAt: string;
+  expiresAt: string;
+  jumlahPesan: number;
+}
+
+export interface ForumHistorySnapshot {
+  thread: ForumThread;
+  messages: ForumMessage[];
 }
 
 export interface ForumMessage {

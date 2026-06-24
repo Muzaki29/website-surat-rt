@@ -1,8 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Trash2, Wallet } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import {
+  BulkActionBar,
+  BulkSelectAll,
+  BulkSelectRow,
+  useBulkDeleteHandler,
+} from "@/components/admin/BulkActions";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { formatRupiah } from "@/lib/format";
 import type { JenisTransaksi, TransaksiKas } from "@/lib/types";
 
@@ -26,6 +33,16 @@ export function KasManager() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const allIds = useMemo(() => kas.map((t) => t.id), [kas]);
+  const bulk = useBulkSelection(allIds);
+  const { deleting, handleBulkDelete } = useBulkDeleteHandler({
+    resource: "kas",
+    selectedIds: bulk.selectedIds,
+    itemLabel: "transaksi",
+    clear: bulk.clear,
+    onSuccess: load,
+  });
 
   const saldo = kas.reduce(
     (acc, t) => (t.jenis === "pemasukan" ? acc + t.nominal : acc - t.nominal),
@@ -93,6 +110,14 @@ export function KasManager() {
         </button>
       </form>
 
+      <BulkActionBar
+        count={bulk.selectedCount}
+        itemLabel="transaksi"
+        deleting={deleting}
+        onClear={bulk.clear}
+        onDelete={handleBulkDelete}
+      />
+
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
           <p className="p-6 text-sm text-slate-500">Memuat transaksi...</p>
@@ -105,6 +130,13 @@ export function KasManager() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-slate-100 bg-slate-50 text-slate-600">
               <tr>
+                <th className="w-10 px-4 py-3">
+                  <BulkSelectAll
+                    checked={bulk.allSelected}
+                    indeterminate={bulk.someSelected}
+                    onChange={bulk.toggleAll}
+                  />
+                </th>
                 <th className="px-4 py-3 font-medium">Tanggal</th>
                 <th className="px-4 py-3 font-medium">Keterangan</th>
                 <th className="px-4 py-3 font-medium">Jenis</th>
@@ -115,6 +147,13 @@ export function KasManager() {
             <tbody className="divide-y divide-slate-100">
               {kas.map((t) => (
                 <tr key={t.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <BulkSelectRow
+                      checked={bulk.isSelected(t.id)}
+                      onChange={() => bulk.toggle(t.id)}
+                      label={t.keterangan}
+                    />
+                  </td>
                   <td className="px-4 py-3 text-slate-600">{t.tanggal}</td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-slate-900">{t.keterangan}</p>

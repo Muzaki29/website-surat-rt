@@ -36,6 +36,7 @@ model ForumThread {
   penulisNama   String
   createdAt     String
   updatedAt     String
+  expiresAt     String?
 }
 
 model ForumMessage {
@@ -45,6 +46,19 @@ model ForumMessage {
   penulisNama   String
   isi           String
   createdAt     String
+}
+
+model ForumHistoryLog {
+  id             String @id
+  threadId       String
+  judul          String
+  penulisUserId  String
+  penulisNama    String
+  createdAt      String
+  archivedAt     String
+  expiresAt      String
+  jumlahPesan    Int
+  snapshotJson   String
 }
 
 model SuratMasuk {

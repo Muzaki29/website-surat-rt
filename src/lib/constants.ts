@@ -48,6 +48,8 @@ export const FASILITAS_SEKITAR = [
 export const INFO_LAYANAN_KEPENDUDUKAN =
   "Untuk mengurus surat pengantar kependudukan, datang ke Ketua RT/RW setempat atau ke Kantor Kelurahan Makasar (Profil Camat Makasar).";
 
+export const FORUM_RETENTION_DAYS = 14;
+
 export const NAV_LINKS = [
   { href: "/", label: "Beranda" },
   { href: "/layanan", label: "Layanan Surat" },
@@ -55,6 +57,21 @@ export const NAV_LINKS = [
   { href: "/pengumuman", label: "Pengumuman" },
   { href: "/polling", label: "Polling" },
   { href: "/forum", label: "Forum" },
+  { href: "/bantuan", label: "Bantuan" },
+] as const;
+
+/** Label ringkas untuk navbar desktop — hindari wrap teks */
+export const HEADER_PRIMARY_NAV = [
+  { href: "/", label: "Beranda" },
+  { href: "/layanan", label: "Layanan" },
+  { href: "/pembayaran", label: "Iuran" },
+  { href: "/pengumuman", label: "Pengumuman" },
+  { href: "/forum", label: "Forum" },
+] as const;
+
+export const HEADER_MORE_NAV = [
+  { href: "/polling", label: "Polling" },
+  { href: "/status", label: "Cek Status" },
   { href: "/bantuan", label: "Bantuan" },
 ] as const;
 

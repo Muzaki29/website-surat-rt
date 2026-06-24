@@ -3,25 +3,30 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MessageSquarePlus, MessagesSquare } from "lucide-react";
+import { Archive, Clock, MessageSquarePlus, MessagesSquare, PenLine } from "lucide-react";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
-import { RT_INFO } from "@/lib/constants";
+import { FORUM_RETENTION_DAYS, RT_INFO } from "@/lib/constants";
 import type { ForumThread } from "@/lib/types";
 
-function formatTime(iso: string) {
+function formatDate(iso: string) {
   try {
-    return new Date(iso).toLocaleString("id-ID", {
+    return new Date(iso).toLocaleDateString("id-ID", {
       day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
+      month: "long",
+      year: "numeric",
     });
   } catch {
     return iso;
   }
+}
+
+function excerpt(text: string, max = 160) {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= max) return clean;
+  return `${clean.slice(0, max).trim()}…`;
 }
 
 export function ForumListPage() {
@@ -59,7 +64,7 @@ export function ForumListPage() {
     setSubmitting(false);
 
     if (!res.ok) {
-      setError(data.error ?? "Gagal membuat topik.");
+      setError(data.error ?? "Gagal membuat artikel.");
       return;
     }
 
@@ -72,47 +77,67 @@ export function ForumListPage() {
 
       <main className="flex min-h-[calc(100dvh-4rem)] flex-1 flex-col bg-[var(--color-background)]">
         <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-          <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4 px-4 py-8 sm:px-6">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Forum Diskusi Warga</h1>
-              <p className="mt-2 max-w-[55ch] text-sm text-[var(--color-text-muted)]">
-                Ruang ngobrol antar warga {RT_INFO.nama} — saling bantu info lingkungan, kegiatan,
-                dan hal RT.
-              </p>
+          <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-[var(--color-accent)]">
+                  Forum Warga
+                </p>
+                <h1 className="mt-1 text-3xl font-bold tracking-tight">Diskusi & Informasi RT</h1>
+                <p className="mt-2 max-w-[55ch] text-sm leading-relaxed text-[var(--color-text-muted)]">
+                  Bagikan informasi, tanya jawab, dan follow-up kegiatan {RT_INFO.nama}. Setiap
+                  artikel aktif selama {FORUM_RETENTION_DAYS} hari, lalu otomatis diarsipkan.
+                </p>
+              </div>
+              <Button type="button" onClick={() => setShowForm((v) => !v)}>
+                <PenLine className="h-4 w-4" />
+                Tulis Artikel
+              </Button>
             </div>
-            <Button type="button" onClick={() => setShowForm((v) => !v)}>
-              <MessageSquarePlus className="h-4 w-4" />
-              Topik Baru
-            </Button>
+
+            <nav className="mt-6 flex gap-4 border-t border-[var(--color-border)] pt-4 text-sm">
+              <span className="font-medium text-[var(--color-text)]">Artikel Aktif</span>
+              <Link
+                href="/forum/riwayat"
+                className="inline-flex items-center gap-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              >
+                <Archive className="h-3.5 w-3.5" />
+                Riwayat Arsip
+              </Link>
+            </nav>
           </div>
         </div>
 
-        <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
+        <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6">
           {showForm && (
             <form
               onSubmit={handleCreate}
-              className="mb-8 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6"
+              className="mb-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6"
             >
-              <h2 className="font-semibold">Buat Topik Diskusi</h2>
-              <div className="mt-4 space-y-4">
+              <h2 className="font-semibold">Artikel / Diskusi Baru</h2>
+              <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                Tulis judul dan isi pembuka. Warga lain bisa menanggapi di bawah artikel.
+              </p>
+              <div className="mt-5 space-y-4">
                 <Input
-                  label="Judul topik"
+                  label="Judul"
                   required
                   value={judul}
                   onChange={(e) => setJudul(e.target.value)}
-                  placeholder="Contoh: Jadwal kerja bakti Minggu"
+                  placeholder="Contoh: Update got mampet Blok B — perlu kerja bakti"
                 />
                 <Textarea
-                  label="Pesan pembuka"
+                  label="Isi pembuka"
                   required
-                  rows={3}
+                  rows={6}
                   value={pesanAwal}
                   onChange={(e) => setPesanAwal(e.target.value)}
+                  placeholder="Jelaskan informasi atau pertanyaan Anda secara lengkap..."
                 />
                 {error && <p className="text-sm text-red-600">{error}</p>}
                 <div className="flex gap-2">
                   <Button type="submit" disabled={submitting}>
-                    {submitting ? "Membuat..." : "Mulai Diskusi"}
+                    {submitting ? "Mempublikasikan..." : "Publikasikan"}
                   </Button>
                   <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
                     Batal
@@ -123,36 +148,49 @@ export function ForumListPage() {
           )}
 
           {loading ? (
-            <p className="text-sm text-[var(--color-text-muted)]">Memuat forum...</p>
+            <p className="text-sm text-[var(--color-text-muted)]">Memuat artikel...</p>
           ) : threads.length === 0 ? (
             <div className="rounded-xl border border-dashed border-[var(--color-border)] p-12 text-center">
               <MessagesSquare className="mx-auto h-10 w-10 text-[var(--color-text-subtle)]" />
-              <p className="mt-4 font-medium">Belum ada diskusi</p>
+              <p className="mt-4 font-medium">Belum ada artikel aktif</p>
               <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                Jadilah yang pertama memulai percakapan warga RT.
+                Jadilah yang pertama berbagi informasi untuk warga RT.
               </p>
+              <Button type="button" className="mt-6" onClick={() => setShowForm(true)}>
+                <MessageSquarePlus className="h-4 w-4" />
+                Tulis Artikel Pertama
+              </Button>
             </div>
           ) : (
-            <div className="divide-y divide-[var(--color-border)] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div className="space-y-6">
               {threads.map((thread) => (
-                <Link
+                <article
                   key={thread.id}
-                  href={`/forum/${thread.id}`}
-                  className="flex cursor-pointer flex-col gap-2 px-5 py-4 transition-colors hover:bg-[var(--color-surface-muted)] sm:flex-row sm:items-center sm:justify-between"
+                  className="group rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition-shadow hover:shadow-sm"
                 >
-                  <div>
-                    <p className="font-semibold">{thread.judul}</p>
-                    <p className="mt-1 line-clamp-1 text-sm text-[var(--color-text-muted)]">
-                      {thread.pesanTerakhir ?? "—"}
+                  <Link href={`/forum/${thread.id}`} className="block cursor-pointer">
+                    <h2 className="text-xl font-semibold leading-snug group-hover:text-[var(--color-accent)]">
+                      {thread.judul}
+                    </h2>
+                    <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-muted)]">
+                      {excerpt(thread.pesanPembuka ?? thread.pesanTerakhir ?? "—")}
                     </p>
-                    <p className="mt-2 text-xs text-[var(--color-text-subtle)]">
-                      oleh {thread.penulisNama} · {formatTime(thread.updatedAt)}
-                    </p>
-                  </div>
-                  <span className="shrink-0 text-xs font-medium tabular-nums text-[var(--color-accent)]">
-                    {thread.jumlahPesan ?? 0} pesan
-                  </span>
-                </Link>
+                    <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[var(--color-text-subtle)]">
+                      <span>oleh {thread.penulisNama}</span>
+                      <span>{formatDate(thread.createdAt)}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <MessagesSquare className="h-3 w-3" />
+                        {thread.jumlahPesan ?? 0} tanggapan
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-amber-700">
+                        <Clock className="h-3 w-3" />
+                        {thread.hariTersisa === 0
+                          ? "Berakhir hari ini"
+                          : `${thread.hariTersisa} hari lagi`}
+                      </span>
+                    </div>
+                  </Link>
+                </article>
               ))}
             </div>
           )}

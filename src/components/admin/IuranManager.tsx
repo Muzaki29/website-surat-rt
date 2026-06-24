@@ -1,11 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { CheckCircle, Receipt, XCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { CheckCircle, Receipt, Trash2, XCircle } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import {
+  BulkActionBar,
+  BulkSelectAll,
+  BulkSelectRow,
+  useBulkDeleteHandler,
+} from "@/components/admin/BulkActions";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { JENIS_IURAN } from "@/lib/constants";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { bulkDeleteRequest } from "@/lib/bulk-client";
 import { formatRupiah } from "@/lib/format";
 import type { TagihanIuran } from "@/lib/types";
 
@@ -25,6 +33,16 @@ export function IuranManager() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const allIds = useMemo(() => tagihan.map((t) => t.id), [tagihan]);
+  const bulk = useBulkSelection(allIds);
+  const { deleting, handleBulkDelete } = useBulkDeleteHandler({
+    resource: "iuran",
+    selectedIds: bulk.selectedIds,
+    itemLabel: "tagihan",
+    clear: bulk.clear,
+    onSuccess: load,
+  });
 
   async function handleGenerate() {
     setGenerating(true);
@@ -52,6 +70,12 @@ export function IuranManager() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "tolak", id }),
     });
+    load();
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Hapus tagihan ini?")) return;
+    await bulkDeleteRequest("iuran", [id]);
     load();
   }
 
@@ -115,6 +139,14 @@ export function IuranManager() {
         </div>
       </div>
 
+      <BulkActionBar
+        count={bulk.selectedCount}
+        itemLabel="tagihan"
+        deleting={deleting}
+        onClear={bulk.clear}
+        onDelete={handleBulkDelete}
+      />
+
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
           <p className="p-6 text-sm text-slate-500">Memuat tagihan...</p>
@@ -127,6 +159,13 @@ export function IuranManager() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-slate-100 bg-slate-50 text-slate-600">
               <tr>
+                <th className="w-10 px-4 py-3">
+                  <BulkSelectAll
+                    checked={bulk.allSelected}
+                    indeterminate={bulk.someSelected}
+                    onChange={bulk.toggleAll}
+                  />
+                </th>
                 <th className="px-4 py-3 font-medium">Warga</th>
                 <th className="px-4 py-3 font-medium">Jenis</th>
                 <th className="px-4 py-3 font-medium">Periode</th>
@@ -138,24 +177,41 @@ export function IuranManager() {
             <tbody className="divide-y divide-slate-100">
               {tagihan.map((t) => (
                 <tr key={t.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <BulkSelectRow
+                      checked={bulk.isSelected(t.id)}
+                      onChange={() => bulk.toggle(t.id)}
+                      label={t.wargaNama}
+                    />
+                  </td>
                   <td className="px-4 py-3 font-medium text-slate-900">{t.wargaNama}</td>
                   <td className="px-4 py-3 text-slate-600">{t.jenisIuran}</td>
                   <td className="px-4 py-3 text-slate-600">{t.periode}</td>
                   <td className="px-4 py-3 text-slate-900">{formatRupiah(t.nominal)}</td>
                   <td className="px-4 py-3"><Badge status={t.status} /></td>
                   <td className="px-4 py-3">
-                    {t.status === "menunggu-konfirmasi" && (
-                      <div className="flex flex-wrap gap-1">
-                        <Button type="button" size="sm" onClick={() => handleKonfirmasi(t.id)}>
-                          <CheckCircle className="h-3.5 w-3.5" />
-                          Konfirmasi
-                        </Button>
-                        <Button type="button" size="sm" variant="danger" onClick={() => handleTolak(t.id)}>
-                          <XCircle className="h-3.5 w-3.5" />
-                          Tolak
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex flex-wrap items-center gap-1">
+                      {t.status === "menunggu-konfirmasi" && (
+                        <>
+                          <Button type="button" size="sm" onClick={() => handleKonfirmasi(t.id)}>
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            Konfirmasi
+                          </Button>
+                          <Button type="button" size="sm" variant="danger" onClick={() => handleTolak(t.id)}>
+                            <XCircle className="h-3.5 w-3.5" />
+                            Tolak
+                          </Button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(t.id)}
+                        className="rounded p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600"
+                        aria-label="Hapus tagihan"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                     {t.kodeReferensi && (
                       <p className="mt-1 font-mono text-xs text-[var(--color-text-subtle)]">
                         Ref: {t.kodeReferensi}

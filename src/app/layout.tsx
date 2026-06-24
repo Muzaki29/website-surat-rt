@@ -22,8 +22,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="id" className={`${plusJakarta.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-[var(--color-background)] text-[var(--color-text)]">
+    <html lang="id" className={`${plusJakarta.variable} h-full antialiased`} suppressHydrationWarning>
+      <body
+        suppressHydrationWarning
+        className="min-h-full flex flex-col bg-[var(--color-background)] text-[var(--color-text)]"
+      >
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

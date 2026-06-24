@@ -1,11 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FileDown, Plus, Trash2 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import {
+  BulkActionBar,
+  BulkSelectAll,
+  BulkSelectRow,
+  useBulkDeleteHandler,
+} from "@/components/admin/BulkActions";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import type { StatusSurat, SuratKeluar } from "@/lib/types";
 
 const emptyForm = {
@@ -30,6 +37,16 @@ export function SuratKeluarManager() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const allIds = useMemo(() => items.map((s) => s.id), [items]);
+  const bulk = useBulkSelection(allIds);
+  const { deleting, handleBulkDelete } = useBulkDeleteHandler({
+    resource: "surat-keluar",
+    selectedIds: bulk.selectedIds,
+    itemLabel: "catatan",
+    clear: bulk.clear,
+    onSuccess: load,
+  });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -89,6 +106,14 @@ export function SuratKeluarManager() {
         </form>
       )}
 
+      <BulkActionBar
+        count={bulk.selectedCount}
+        itemLabel="catatan"
+        deleting={deleting}
+        onClear={bulk.clear}
+        onDelete={handleBulkDelete}
+      />
+
       <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
         {loading ? (
           <p className="p-6 text-sm text-[var(--color-text-muted)]">Memuat data...</p>
@@ -98,6 +123,13 @@ export function SuratKeluarManager() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]">
               <tr>
+                <th className="w-10 px-4 py-3">
+                  <BulkSelectAll
+                    checked={bulk.allSelected}
+                    indeterminate={bulk.someSelected}
+                    onChange={bulk.toggleAll}
+                  />
+                </th>
                 <th className="px-4 py-3 font-medium">No. Surat</th>
                 <th className="px-4 py-3 font-medium">Tanggal</th>
                 <th className="px-4 py-3 font-medium">Tujuan</th>
@@ -109,6 +141,13 @@ export function SuratKeluarManager() {
             <tbody className="divide-y divide-[var(--color-border)]">
               {items.map((s) => (
                 <tr key={s.id} className="transition-colors hover:bg-[var(--color-surface-muted)]/60">
+                  <td className="px-4 py-3">
+                    <BulkSelectRow
+                      checked={bulk.isSelected(s.id)}
+                      onChange={() => bulk.toggle(s.id)}
+                      label={s.nomorSurat}
+                    />
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs font-medium">{s.nomorSurat}</td>
                   <td className="px-4 py-3 text-[var(--color-text-muted)]">{s.tanggalSurat}</td>
                   <td className="px-4 py-3 font-medium">{s.tujuan}</td>

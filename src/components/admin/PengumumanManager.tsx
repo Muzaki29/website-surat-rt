@@ -1,8 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Megaphone, Plus, Trash2 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import {
+  BulkActionBar,
+  BulkCardSelect,
+  BulkSelectAll,
+  useBulkDeleteHandler,
+} from "@/components/admin/BulkActions";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { bulkDeleteRequest } from "@/lib/bulk-client";
 import type { Pengumuman } from "@/lib/types";
 
 export function PengumumanManager() {
@@ -26,6 +34,16 @@ export function PengumumanManager() {
     load();
   }, [load]);
 
+  const allIds = useMemo(() => items.map((p) => p.id), [items]);
+  const bulk = useBulkSelection(allIds);
+  const { deleting, handleBulkDelete } = useBulkDeleteHandler({
+    resource: "pengumuman",
+    selectedIds: bulk.selectedIds,
+    itemLabel: "pengumuman",
+    clear: bulk.clear,
+    onSuccess: load,
+  });
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     await fetch("/api/pengumuman", {
@@ -40,7 +58,7 @@ export function PengumumanManager() {
 
   async function handleDelete(id: string) {
     if (!confirm("Hapus pengumuman ini?")) return;
-    await fetch(`/api/pengumuman?id=${id}`, { method: "DELETE" });
+    await bulkDeleteRequest("pengumuman", [id]);
     load();
   }
 
@@ -85,6 +103,26 @@ export function PengumumanManager() {
         </form>
       )}
 
+      {items.length > 0 && (
+        <div className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+          <BulkSelectAll
+            checked={bulk.allSelected}
+            indeterminate={bulk.someSelected}
+            onChange={bulk.toggleAll}
+            label="Pilih semua pengumuman"
+          />
+          <span className="text-sm text-slate-600">Pilih semua</span>
+        </div>
+      )}
+
+      <BulkActionBar
+        count={bulk.selectedCount}
+        itemLabel="pengumuman"
+        deleting={deleting}
+        onClear={bulk.clear}
+        onDelete={handleBulkDelete}
+      />
+
       <div className="space-y-3">
         {loading ? (
           <p className="text-sm text-slate-500">Memuat pengumuman...</p>
@@ -95,7 +133,12 @@ export function PengumumanManager() {
           </div>
         ) : (
           items.map((p) => (
-            <div key={p.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <BulkCardSelect
+              key={p.id}
+              checked={bulk.isSelected(p.id)}
+              onChange={() => bulk.toggle(p.id)}
+              label={p.judul}
+            >
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -111,7 +154,7 @@ export function PengumumanManager() {
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
-            </div>
+            </BulkCardSelect>
           ))
         )}
       </div>
