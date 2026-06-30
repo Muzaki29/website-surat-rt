@@ -305,6 +305,43 @@ npm run db:backup    # Backup DB + data/json ke folder backups/
 
 ## Deploy Produksi
 
+### VPS Jetorbit (rt05kampungmakasar.web.id)
+
+| Item | Nilai |
+|------|-------|
+| Server | `103.235.72.55` (Syahdu VPS) |
+| Path app | `/var/www/rt05kampungmakasar` |
+| Port internal | `3010` (PM2: `suratrt-rt05`) |
+| Nginx config | `/etc/nginx/sites-available/rt05kampungmakasar.web.id` |
+
+**Project lain tidak disentuh** — `web-syahdulab` tetap di port `3000`, site nginx lain tidak diubah.
+
+#### DNS (wajib — lakukan di panel domain)
+
+| Type | Host | Value |
+|------|------|-------|
+| A | `@` | `103.235.72.55` |
+| A | `www` | `103.235.72.55` |
+
+Tunggu propagasi DNS (5 menit–24 jam), lalu aktifkan SSL di server:
+
+```bash
+ssh root@103.235.72.55
+bash /var/www/rt05kampungmakasar/scripts/vps-ssl.sh
+```
+
+#### Update deploy berikutnya
+
+```bash
+cd /var/www/rt05kampungmakasar
+git pull origin main
+npm install
+npm run build
+pm2 restart suratrt-rt05
+```
+
+> **Produksi:** ganti password demo admin segera setelah DNS aktif.
+
 ### Build lokal
 
 ```bash
