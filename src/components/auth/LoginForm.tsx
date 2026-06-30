@@ -55,9 +55,13 @@ export function LoginForm() {
       if (result.error.toLowerCase().includes("captcha")) {
         setCaptchaError("Captcha salah atau kedaluwarsa. Coba lagi.");
         setCaptchaKey((k) => k + 1);
+      } else if (result.error.toLowerCase().includes("terlalu banyak")) {
+        setError(result.error);
+      } else if (result.error.toLowerCase().includes("dinonaktifkan")) {
+        setError(result.error);
       } else {
         setError(
-          "Login gagal. Periksa NIK/email dan kata sandi. Warga baru harus menunggu verifikasi RT.",
+          "Login gagal. Periksa email/NIK dan kata sandi. Pengurus: gunakan email (mis. admin@rt001.local), bukan NIK. Warga baru harus menunggu verifikasi RT.",
         );
       }
       return;

@@ -143,6 +143,18 @@ Setelah `npm run db:setup`:
 
 **Warga:** daftar mandiri di `/daftar` → diverifikasi pengurus di `/admin/warga` → login dengan NIK atau email.
 
+### Cara login pengurus
+
+1. Buka `/login` (bukan `/daftar`).
+2. **Email:** ketik persis `admin@rt001.local` (bukan NIK).
+3. **Password:** `admin123` (atau sesuai tabel di atas).
+4. **Captcha:** isi hasil penjumlahan angka (wajib).
+5. Jika gagal setelah pull/clone baru, jalankan ulang:
+   ```bash
+   npm run db:setup
+   ```
+6. **Restart dev server** setelah update kode (`stop.bat` → `start.bat`).
+
 > Ganti password demo sebelum deploy produksi.
 
 ---
@@ -333,6 +345,8 @@ Panduan detail deploy, backup, dan checklist maintenance: [docs/PANDUAN-MAINTENA
 | Error Prisma `Unknown argument` | Stop dev server → `npm run db:setup` → start ulang |
 | Registrasi gagal / JSON error | Pastikan database sudah di-push; cek log terminal |
 | Login warga ditolak | Akun belum diverifikasi di `/admin/warga` |
+| Login pengurus gagal | Pakai **email** (bukan NIK), isi **captcha**, jalankan `npm run db:setup`, restart dev server |
+| `/api/auth/session` error | Hentikan dev server lama, jalankan `stop.bat` lalu `start.bat` |
 | Build gagal `EPERM` Prisma | Tutup proses `npm run dev` yang masih berjalan |
 | Halaman admin redirect ke login | Pastikan `AUTH_SECRET` terisi di `.env` |
 

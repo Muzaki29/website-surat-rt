@@ -1,51 +1,14 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import { authConfig } from "@/auth.config";
 import { prisma } from "@/lib/db";
 import { verifyMathCaptcha } from "@/lib/captcha";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { PeranPengguna } from "@/lib/types";
 
-declare module "next-auth" {
-  interface User {
-    role?: PeranPengguna;
-    wargaId?: string | null;
-  }
-  interface Session {
-    user: {
-      id: string;
-      email: string;
-      name: string;
-      role: PeranPengguna;
-      wargaId?: string | null;
-    };
-  }
-}
-
-declare module "@auth/core/jwt" {
-  interface JWT {
-    role?: PeranPengguna;
-    id?: string;
-    wargaId?: string | null;
-    tokenVersion?: number;
-    revoked?: boolean;
-  }
-}
-
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  trustHost: true,
-  session: { strategy: "jwt", maxAge: 8 * 60 * 60 },
-  pages: { signIn: "/login" },
-  cookies: {
-    sessionToken: {
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-      },
-    },
-  },
+  ...authConfig,
   providers: [
     Credentials({
       name: "credentials",
@@ -105,12 +68,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
+    ...authConfig.callbacks,
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.wargaId = user.wargaId;
-        token.tokenVersion = (user as { tokenVersion?: number }).tokenVersion ?? 0;
+        token.tokenVersion = user.tokenVersion ?? 0;
+        token.revoked = false;
       }
 
       if (token.id) {
