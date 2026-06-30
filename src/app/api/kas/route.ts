@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
+import { requirePermission } from "@/lib/auth-api";
 import { createId } from "@/lib/id";
 import { readJson, writeJson } from "@/lib/storage";
 import type { TransaksiKas } from "@/lib/types";
 
 export async function GET() {
+  const auth = await requirePermission("kas:read");
+  if (auth.error) return auth.error;
+
   const kas = await readJson<TransaksiKas[]>("kas.json", []);
   return NextResponse.json(kas);
 }
 
 export async function POST(request: Request) {
+  const auth = await requirePermission("kas:write");
+  if (auth.error) return auth.error;
+
   const body = await request.json();
   const kas = await readJson<TransaksiKas[]>("kas.json", []);
 
@@ -27,6 +34,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const auth = await requirePermission("kas:write");
+  if (auth.error) return auth.error;
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "ID wajib" }, { status: 400 });

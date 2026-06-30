@@ -21,6 +21,25 @@ export function StatusTracker({ data, id }: { data: PengajuanSurat; id: string }
         <p className="mt-2 font-mono text-xs text-[var(--color-text-subtle)]">ID: {id}</p>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">Pemohon: {data.namaPemohon}</p>
         <div className="mt-4"><Badge status={data.status} /></div>
+        {data.berkas && data.berkas.length > 0 && (
+          <div className="mt-4 border-t border-[var(--color-border)] pt-4">
+            <p className="text-sm font-medium">Berkas terlampir ({data.berkas.length})</p>
+            <ul className="mt-2 space-y-1">
+              {data.berkas.map((b) => (
+                <li key={b.id}>
+                  <a
+                    href={`/api/pengajuan/berkas/${b.id}?pengajuanId=${id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-[var(--color-primary)] hover:underline"
+                  >
+                    {b.jenis.toUpperCase()} — {b.namaFile}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {data.status !== "ditolak" ? (

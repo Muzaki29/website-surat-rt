@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { verifyMathCaptcha } from "@/lib/captcha";
 import type { PeranPengguna } from "@/lib/types";
 
 declare module "next-auth" {
@@ -38,11 +39,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         email: { label: "Email atau NIK", type: "text" },
         password: { label: "Password", type: "password" },
+        captchaToken: { label: "Captcha Token", type: "text" },
+        captchaAnswer: { label: "Captcha Answer", type: "text" },
       },
       async authorize(credentials) {
         const identifier = (credentials?.email as string | undefined)?.trim();
         const password = credentials?.password as string | undefined;
+        const captchaToken = credentials?.captchaToken as string | undefined;
+        const captchaAnswer = credentials?.captchaAnswer as string | undefined;
+
         if (!identifier || !password) return null;
+
+        if (!captchaToken || !captchaAnswer || !verifyMathCaptcha(captchaToken, captchaAnswer)) {
+          throw new Error("Captcha tidak valid atau sudah kedaluwarsa.");
+        }
 
         const user = await prisma.user.findFirst({
           where: {
@@ -83,7 +93,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = (token.role as PeranPengguna) ?? "admin";
+        session.user.role = (token.role as PeranPengguna) ?? "warga";
         session.user.wargaId = (token.wargaId as string | null) ?? null;
       }
       return session;

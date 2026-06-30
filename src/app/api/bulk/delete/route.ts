@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { requireSession } from "@/lib/auth-api";
+import { requireSession, requirePermission } from "@/lib/auth-api";
+import { BULK_RESOURCE_PERMISSION, hasPermission } from "@/lib/permissions";
+import type { PeranPengguna } from "@/lib/types";
 import { bulkDeleteRecords, isBulkResource, parseBulkIds } from "@/lib/bulk-delete";
 
 export async function POST(request: Request) {
@@ -12,6 +14,11 @@ export async function POST(request: Request) {
 
   if (!isBulkResource(resource)) {
     return NextResponse.json({ error: "Resource tidak valid" }, { status: 400 });
+  }
+
+  const perm = BULK_RESOURCE_PERMISSION[resource];
+  if (!perm || !hasPermission(auth.session!.user.role as PeranPengguna, perm)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   if (ids.length === 0) {

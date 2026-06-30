@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { getSession, signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Lock } from "lucide-react";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
+import { MathCaptcha, type CaptchaValue } from "@/components/auth/MathCaptcha";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -17,26 +18,48 @@ export function LoginForm() {
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [captcha, setCaptcha] = useState<CaptchaValue>({ token: "", answer: "" });
+  const [captchaKey, setCaptchaKey] = useState(0);
   const [error, setError] = useState("");
+  const [captchaError, setCaptchaError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleCaptchaChange = useCallback((value: CaptchaValue) => {
+    setCaptcha(value);
+    setCaptchaError("");
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setCaptchaError("");
+
+    if (!captcha.token || !captcha.answer.trim()) {
+      setCaptchaError("Jawaban captcha wajib diisi.");
+      setLoading(false);
+      return;
+    }
 
     const result = await signIn("credentials", {
       email: identifier.trim(),
       password,
+      captchaToken: captcha.token,
+      captchaAnswer: captcha.answer.trim(),
       redirect: false,
     });
 
     setLoading(false);
 
     if (result?.error) {
-      setError(
-        "Login gagal. Periksa NIK/email dan kata sandi. Warga baru harus menunggu verifikasi RT.",
-      );
+      if (result.error.toLowerCase().includes("captcha")) {
+        setCaptchaError("Captcha salah atau kedaluwarsa. Coba lagi.");
+        setCaptchaKey((k) => k + 1);
+      } else {
+        setError(
+          "Login gagal. Periksa NIK/email dan kata sandi. Warga baru harus menunggu verifikasi RT.",
+        );
+      }
       return;
     }
 
@@ -44,7 +67,7 @@ export function LoginForm() {
     if (callbackUrl) {
       router.push(callbackUrl);
     } else if (session?.user?.role === "warga") {
-      router.push("/forum");
+      router.push("/akun");
     } else {
       router.push("/admin");
     }
@@ -94,6 +117,13 @@ export function LoginForm() {
                 placeholder="••••••••"
               />
 
+              <MathCaptcha
+                key={captchaKey}
+                value={captcha}
+                onChange={handleCaptchaChange}
+                error={captchaError}
+              />
+
               {error && (
                 <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
                   {error}
@@ -110,9 +140,6 @@ export function LoginForm() {
               <Link href="/daftar" className="font-semibold text-[var(--color-primary)] hover:underline">
                 Daftar warga
               </Link>
-            </p>
-            <p className="mt-2 text-center text-xs text-[var(--color-text-subtle)]">
-              Demo pengurus: admin@rt001.local / admin123
             </p>
           </div>
         </div>

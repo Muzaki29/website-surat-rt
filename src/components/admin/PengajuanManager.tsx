@@ -110,6 +110,22 @@ export function PengajuanManager() {
                   <td className="px-4 py-3">
                     <p className="font-medium">{p.namaPemohon}</p>
                     <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">{p.nik}</p>
+                    {p.berkas && p.berkas.length > 0 && (
+                      <p className="mt-1 text-xs text-[var(--color-accent)]">
+                        {p.berkas.length} berkas ·{" "}
+                        {p.berkas.map((b) => (
+                          <a
+                            key={b.id}
+                            href={`/api/pengajuan/berkas/${b.id}?pengajuanId=${p.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mr-2 underline"
+                          >
+                            {b.jenis}
+                          </a>
+                        ))}
+                      </p>
+                    )}
                     <p className="mt-1 text-xs text-[var(--color-text-subtle)] lg:hidden">{getJenisLabel(p.jenisSurat)}</p>
                   </td>
                   <td className="hidden px-4 py-3 text-[var(--color-text-muted)] lg:table-cell">

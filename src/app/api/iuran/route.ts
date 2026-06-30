@@ -1,19 +1,50 @@
 import { NextResponse } from "next/server";
 import { JENIS_IURAN, RT_INFO } from "@/lib/constants";
-import { requireSession } from "@/lib/auth-api";
+import {
+  getWargaFromSession,
+  requirePermission,
+  requireSession,
+  requireWarga,
+} from "@/lib/auth-api";
+import { METODE_PEMBAYARAN_LABEL } from "@/lib/keluarga";
 import { createId } from "@/lib/id";
+import { createNotifikasi } from "@/lib/notifikasi";
 import {
   formatPembayaranNotification,
   sendWhatsAppNotification,
 } from "@/lib/notifications";
+import { formatRupiah } from "@/lib/format";
+import { hasPermission } from "@/lib/permissions";
 import { readJson, writeJson } from "@/lib/storage";
-import type { TagihanIuran, TransaksiKas, Warga } from "@/lib/types";
+import type { PeranPengguna, TagihanIuran, TransaksiKas, Warga } from "@/lib/types";
 
 export async function GET(request: Request) {
-  const nik = new URL(request.url).searchParams.get("nik");
+  const url = new URL(request.url);
+  const me = url.searchParams.get("me");
+  const nik = url.searchParams.get("nik");
   const tagihan = await readJson<TagihanIuran[]>("iuran.json", []);
 
+  if (me === "1") {
+    const auth = await requireWarga();
+    if (auth.error) return auth.error;
+    const warga = await getWargaFromSession(auth.session!);
+    if (!warga) {
+      return NextResponse.json({ error: "Data warga tidak ditemukan" }, { status: 404 });
+    }
+    const milik = tagihan.filter((t) => t.wargaId === warga.id);
+    return NextResponse.json({ warga, tagihan: milik });
+  }
+
   if (nik) {
+    const auth = await requireSession();
+    if (auth.error) return auth.error;
+    const role = auth.session!.user.role as PeranPengguna;
+    if (!hasPermission(role, "warga:read")) {
+      const own = await getWargaFromSession(auth.session!);
+      if (!own || own.nik !== nik) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
     const warga = await readJson<Warga[]>("warga.json", []);
     const found = warga.find((w) => w.nik === nik);
     if (!found) {
@@ -23,7 +54,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ warga: found, tagihan: milik });
   }
 
-  const auth = await requireSession();
+  const auth = await requirePermission("iuran:read");
   if (auth.error) return auth.error;
 
   return NextResponse.json(tagihan);
@@ -33,7 +64,7 @@ export async function POST(request: Request) {
   const body = await request.json();
 
   if (body.action === "generate") {
-    const auth = await requireSession();
+    const auth = await requirePermission("iuran:manage");
     if (auth.error) return auth.error;
 
     const warga = await readJson<Warga[]>("warga.json", []);
@@ -68,10 +99,21 @@ export async function POST(request: Request) {
   }
 
   if (body.action === "ajukan-bayar") {
+    const auth = await requireWarga();
+    if (auth.error) return auth.error;
+
+    const warga = await getWargaFromSession(auth.session!);
+    if (!warga) {
+      return NextResponse.json({ error: "Data warga tidak ditemukan" }, { status: 404 });
+    }
+
     const tagihan = await readJson<TagihanIuran[]>("iuran.json", []);
     const index = tagihan.findIndex((t) => t.id === body.id);
     if (index === -1) {
       return NextResponse.json({ error: "Tagihan tidak ditemukan" }, { status: 404 });
+    }
+    if (tagihan[index].wargaId !== warga.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     if (tagihan[index].status !== "belum-bayar") {
       return NextResponse.json({ error: "Tagihan tidak dapat dibayar" }, { status: 400 });
@@ -87,6 +129,24 @@ export async function POST(request: Request) {
     };
 
     await writeJson("iuran.json", tagihan);
+
+    const metodeLabel =
+      METODE_PEMBAYARAN_LABEL[tagihan[index].metodePembayaran ?? ""] ??
+      tagihan[index].metodePembayaran ??
+      "Manual";
+
+    await createNotifikasi({
+      tipe: "pembayaran",
+      judul: `Pembayaran ${metodeLabel} menunggu konfirmasi`,
+      pesan: `${tagihan[index].wargaNama} mengajukan bayar ${formatRupiah(tagihan[index].nominal)} (${tagihan[index].periode}) via ${metodeLabel}. Ref: ${tagihan[index].kodeReferensi || "—"}`,
+      href: "/admin/iuran",
+      level: "warning",
+      meta: {
+        tagihanId: tagihan[index].id,
+        metode: tagihan[index].metodePembayaran,
+        nominal: tagihan[index].nominal,
+      },
+    });
 
     const phone = process.env.WHATSAPP_DEFAULT_PHONE || RT_INFO.telepon;
     await sendWhatsAppNotification({
@@ -106,7 +166,7 @@ export async function POST(request: Request) {
   }
 
   if (body.action === "konfirmasi") {
-    const auth = await requireSession();
+    const auth = await requirePermission("iuran:manage");
     if (auth.error) return auth.error;
 
     const tagihan = await readJson<TagihanIuran[]>("iuran.json", []);
@@ -133,11 +193,21 @@ export async function POST(request: Request) {
 
     await writeJson("iuran.json", tagihan);
     await writeJson("kas.json", kas);
+
+    await createNotifikasi({
+      tipe: "pembayaran",
+      judul: "Pembayaran iuran dikonfirmasi",
+      pesan: `${tagihan[index].wargaNama} — ${formatRupiah(tagihan[index].nominal)} (${tagihan[index].periode}) lunas.`,
+      href: "/admin/iuran",
+      level: "success",
+      meta: { tagihanId: tagihan[index].id },
+    });
+
     return NextResponse.json(tagihan[index]);
   }
 
   if (body.action === "tolak") {
-    const auth = await requireSession();
+    const auth = await requirePermission("iuran:manage");
     if (auth.error) return auth.error;
 
     const tagihan = await readJson<TagihanIuran[]>("iuran.json", []);

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireSession } from "@/lib/auth-api";
+import { requirePermission } from "@/lib/auth-api";
 import { createId } from "@/lib/id";
 import { readJson, writeJson } from "@/lib/storage";
 import type { TiketSupport } from "@/lib/types";
 
 export async function GET() {
-  const auth = await requireSession();
+  const auth = await requirePermission("support:read");
   if (auth.error) return auth.error;
 
   const tiket = await readJson<TiketSupport[]>("support.json", []);
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const auth = await requireSession();
+  const auth = await requirePermission("support:manage");
   if (auth.error) return auth.error;
 
   const body = await request.json();

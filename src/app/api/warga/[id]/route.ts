@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireSession } from "@/lib/auth-api";
+import { requirePermission } from "@/lib/auth-api";
 import { readJson, writeJson } from "@/lib/storage";
 import type { StatusWarga, Warga } from "@/lib/types";
 
 type Props = { params: Promise<{ id: string }> };
 
 export async function PUT(request: Request, { params }: Props) {
-  const auth = await requireSession();
+  const auth = await requirePermission("warga:write");
   if (auth.error) return auth.error;
 
   const { id } = await params;
@@ -25,6 +25,7 @@ export async function PUT(request: Request, { params }: Props) {
     ...warga[index],
     nama: body.nama ?? warga[index].nama,
     nik: body.nik ?? warga[index].nik,
+    noKk: (body.noKk as string | undefined)?.replace(/\s/g, "") ?? warga[index].noKk,
     alamat: body.alamat ?? warga[index].alamat,
     noHp: body.noHp ?? warga[index].noHp,
     status,
@@ -35,7 +36,7 @@ export async function PUT(request: Request, { params }: Props) {
 }
 
 export async function PATCH(request: Request, { params }: Props) {
-  const auth = await requireSession();
+  const auth = await requirePermission("warga:verify");
   if (auth.error) return auth.error;
 
   const { id } = await params;
@@ -57,7 +58,7 @@ export async function PATCH(request: Request, { params }: Props) {
 }
 
 export async function DELETE(_request: Request, { params }: Props) {
-  const auth = await requireSession();
+  const auth = await requirePermission("warga:write");
   if (auth.error) return auth.error;
 
   const { id } = await params;

@@ -180,10 +180,16 @@ export function Header() {
 
           {session?.user ? (
             <>
-              <span className="inline-flex max-w-[7rem] items-center gap-1.5 truncate rounded-md bg-[var(--color-surface-muted)] px-2.5 py-2 text-[13px] text-[var(--color-text-muted)]">
+              {isWarga ? (
+                <NavLink href="/akun" label="Akun Saya" pathname={pathname} />
+              ) : null}
+              <Link
+                href={isWarga ? "/akun" : "/admin"}
+                className="inline-flex max-w-[7rem] cursor-pointer items-center gap-1.5 truncate rounded-md bg-[var(--color-surface-muted)] px-2.5 py-2 text-[13px] text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
+              >
                 <User className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
                 <span className="truncate">{session.user.name.split(" ")[0]}</span>
-              </span>
+              </Link>
               {isStaff && (
                 <NavLink href="/admin" label="Admin" pathname={pathname} />
               )}
@@ -275,6 +281,14 @@ export function Header() {
 
               {session?.user ? (
                 <>
+                  {isWarga && (
+                    <Link
+                      href="/akun"
+                      className="block rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-[var(--color-surface-muted)]"
+                    >
+                      Akun Saya
+                    </Link>
+                  )}
                   <p className="px-3 py-1 text-xs text-[var(--color-text-subtle)]">
                     Masuk sebagai {session.user.name}
                   </p>

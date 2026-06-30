@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { createId } from "@/lib/id";
+import { getWargaFromSession, requireWarga } from "@/lib/auth-api";
 import { buildOrderId, createSnapToken, isMidtransEnabled } from "@/lib/midtrans";
+import { createId } from "@/lib/id";
 import { readJson } from "@/lib/storage";
 import type { TagihanIuran } from "@/lib/types";
 
@@ -13,12 +14,24 @@ export async function POST(request: Request) {
     );
   }
 
+  const auth = await requireWarga();
+  if (auth.error) return auth.error;
+
+  const warga = await getWargaFromSession(auth.session!);
+  if (!warga) {
+    return NextResponse.json({ error: "Data warga tidak ditemukan" }, { status: 404 });
+  }
+
   const body = await request.json();
   const tagihan = await readJson<TagihanIuran[]>("iuran.json", []);
   const index = tagihan.findIndex((t) => t.id === body.tagihanId);
 
   if (index === -1) {
     return NextResponse.json({ error: "Tagihan tidak ditemukan" }, { status: 404 });
+  }
+
+  if (tagihan[index].wargaId !== warga.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   if (tagihan[index].status !== "belum-bayar") {

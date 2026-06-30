@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, UserPlus } from "lucide-react";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
+import { TermsModal } from "@/components/auth/TermsModal";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { RT_INFO } from "@/lib/constants";
@@ -16,18 +17,27 @@ export function RegisterForm() {
   const [form, setForm] = useState({
     nama: "",
     nik: "",
+    noKk: "",
     alamat: `${RT_INFO.kampung}, ${RT_INFO.rw}`,
     noHp: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!agreedToTerms) {
+      setError("Anda harus menyetujui Syarat & Ketentuan terlebih dahulu.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     setSuccess("");
@@ -35,7 +45,7 @@ export function RegisterForm() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, agreedToTerms: true }),
     });
     const { data } = await parseJsonResponse<{ error?: string; message?: string }>(res);
 
@@ -48,6 +58,12 @@ export function RegisterForm() {
 
     setSuccess(data?.message ?? "Pendaftaran berhasil.");
     setTimeout(() => router.push("/login"), 2500);
+  }
+
+  function handleAcceptTerms() {
+    setAgreedToTerms(true);
+    setTermsOpen(false);
+    setError("");
   }
 
   return (
@@ -96,6 +112,18 @@ export function RegisterForm() {
                   placeholder="3201xxxxxxxxxxxx"
                 />
                 <Input
+                  label="Nomor Kartu Keluarga (KK)"
+                  required
+                  inputMode="numeric"
+                  maxLength={16}
+                  value={form.noKk}
+                  onChange={(e) => setForm({ ...form, noKk: e.target.value.replace(/\D/g, "") })}
+                  placeholder="16 digit nomor KK"
+                />
+                <p className="-mt-2 text-xs text-[var(--color-text-subtle)] sm:col-span-2">
+                  Anggota keluarga dengan nomor KK yang sama akan terhubung di data admin RT.
+                </p>
+                <Input
                   label="Nomor Telepon / WhatsApp"
                   required
                   type="tel"
@@ -133,13 +161,35 @@ export function RegisterForm() {
                   onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
                 />
 
+                <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={agreedToTerms}
+                      onChange={(e) => setAgreedToTerms(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-[var(--color-border)] accent-[var(--color-accent)]"
+                    />
+                    <span className="text-sm leading-relaxed text-[var(--color-text-muted)]">
+                      Saya telah membaca dan menyetujui{" "}
+                      <button
+                        type="button"
+                        onClick={() => setTermsOpen(true)}
+                        className="cursor-pointer font-semibold text-[var(--color-primary)] underline-offset-2 hover:underline"
+                      >
+                        Syarat & Ketentuan
+                      </button>{" "}
+                      pendaftaran warga {RT_INFO.nama}.
+                    </span>
+                  </label>
+                </div>
+
                 {error && (
                   <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
                     {error}
                   </p>
                 )}
 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading || !agreedToTerms}>
                   {loading ? "Mendaftar..." : "Daftar Sekarang"}
                 </Button>
               </form>
@@ -154,6 +204,12 @@ export function RegisterForm() {
           </div>
         </div>
       </main>
+
+      <TermsModal
+        open={termsOpen}
+        onClose={() => setTermsOpen(false)}
+        onAccept={handleAcceptTerms}
+      />
 
       <Footer />
     </>

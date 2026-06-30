@@ -58,6 +58,35 @@ export interface PengajuanSurat {
   keperluan: string;
   tanggalAjuan: string;
   status: StatusSurat;
+  berkas?: BerkasPengajuan[];
+}
+
+export type JenisBerkasPengajuan = "ktp" | "kk" | "pendukung";
+
+export interface BerkasPengajuan {
+  id: string;
+  jenis: JenisBerkasPengajuan;
+  namaFile: string;
+  mimeType: string;
+  path: string;
+  uploadedAt: string;
+}
+
+export interface ExtractedBerkasResult {
+  uploadId: string;
+  jenis: JenisBerkasPengajuan;
+  namaFile: string;
+  mimeType: string;
+  extracted: {
+    nik?: string;
+    noKk?: string;
+    namaPemohon?: string;
+    alamat?: string;
+  };
+  fieldsDetected: string[];
+  source: string[];
+  ocrSupported: boolean;
+  message: string;
 }
 
 export interface StatistikDashboard {
@@ -73,6 +102,7 @@ export interface Warga {
   id: string;
   nama: string;
   nik: string;
+  noKk: string;
   alamat: string;
   noHp: string;
   status: StatusWarga;
@@ -80,9 +110,23 @@ export interface Warga {
   userId?: string;
 }
 
+export type TipeNotifikasi = "pembayaran" | "pendaftaran" | "pengajuan" | "sistem";
+
+export interface Notifikasi {
+  id: string;
+  tipe: TipeNotifikasi;
+  judul: string;
+  pesan: string;
+  href?: string;
+  level: "info" | "warning" | "success" | "critical";
+  dibaca: boolean;
+  createdAt: string;
+  meta?: Record<string, unknown>;
+}
+
 export type StatusTagihan = "belum-bayar" | "menunggu-konfirmasi" | "lunas" | "ditolak";
 
-export type MetodePembayaran = "transfer-bank" | "qris" | "tunai";
+export type MetodePembayaran = "transfer-bank" | "qris" | "tunai" | "midtrans";
 
 export interface TagihanIuran {
   id: string;

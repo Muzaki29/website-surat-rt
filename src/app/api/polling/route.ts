@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createId } from "@/lib/id";
-import { requireSession } from "@/lib/auth-api";
+import { getWargaFromSession, requirePermission, requireSession } from "@/lib/auth-api";
 import type { Polling, PollingOpsi, StatusPolling } from "@/lib/types";
 
 function parsePolling(row: {
@@ -40,7 +40,17 @@ export async function POST(request: Request) {
   const body = await request.json();
 
   if (body.action === "vote") {
-    const { pollingId, opsiId, nik } = body;
+    const auth = await requireSession();
+    if (auth.error) return auth.error;
+
+    const { pollingId, opsiId } = body;
+    let nik = body.nik as string | undefined;
+
+    if (auth.session!.user.role === "warga") {
+      const warga = await getWargaFromSession(auth.session!);
+      nik = warga?.nik;
+    }
+
     if (!pollingId || !opsiId || !nik) {
       return NextResponse.json({ error: "Data tidak lengkap" }, { status: 400 });
     }
@@ -70,7 +80,7 @@ export async function POST(request: Request) {
     return NextResponse.json(parsePolling({ ...row, opsiJson: JSON.stringify(opsi) }));
   }
 
-  const auth = await requireSession();
+  const auth = await requirePermission("polling:write");
   if (auth.error) return auth.error;
 
   const opsi: PollingOpsi[] = (body.opsi as string[]).filter(Boolean).map((label) => ({
@@ -99,7 +109,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const auth = await requireSession();
+  const auth = await requirePermission("polling:write");
   if (auth.error) return auth.error;
 
   const body = await request.json();
@@ -119,7 +129,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const auth = await requireSession();
+  const auth = await requirePermission("polling:write");
   if (auth.error) return auth.error;
 
   const id = new URL(request.url).searchParams.get("id");

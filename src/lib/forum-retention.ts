@@ -52,7 +52,7 @@ export async function purgeExpiredForumThreads(): Promise<number> {
         penulisNama: thread.penulisNama,
         createdAt: thread.createdAt,
         archivedAt: now,
-        expiresAt: thread.expiresAt,
+        expiresAt: thread.expiresAt ?? now,
         jumlahPesan: messages.length,
         snapshotJson: JSON.stringify({
           thread: {

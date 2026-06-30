@@ -1,14 +1,24 @@
 import { NextResponse } from "next/server";
 import { RT_INFO } from "@/lib/constants";
 import { requireSession } from "@/lib/auth-api";
+import { requirePermission } from "@/lib/auth-api";
+import { attachTempUploadsToPengajuan } from "@/lib/berkas-storage";
 import { createId } from "@/lib/id";
+import { createNotifikasi } from "@/lib/notifikasi";
 import {
   formatPengajuanNotification,
   formatStatusPengajuanNotification,
   sendWhatsAppNotification,
 } from "@/lib/notifications";
 import { readJson, writeJson } from "@/lib/storage";
-import type { JenisSurat, PengajuanSurat, Warga } from "@/lib/types";
+import type { BerkasPengajuan, JenisBerkasPengajuan, JenisSurat, PengajuanSurat, Warga } from "@/lib/types";
+
+interface BerkasUploadRef {
+  uploadId: string;
+  jenis: JenisBerkasPengajuan;
+  namaFile: string;
+  mimeType: string;
+}
 
 export async function GET(request: Request) {
   const id = new URL(request.url).searchParams.get("id");
@@ -20,7 +30,7 @@ export async function GET(request: Request) {
     return NextResponse.json(item);
   }
 
-  const auth = await requireSession();
+  const auth = await requirePermission("pengajuan:read");
   if (auth.error) return auth.error;
 
   return NextResponse.json(data.sort((a, b) => b.tanggalAjuan.localeCompare(a.tanggalAjuan)));
@@ -29,9 +39,28 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const body = await request.json();
   const data = await readJson<PengajuanSurat[]>("pengajuan.json", []);
+  const pengajuanId = createId();
+  const now = new Date().toISOString();
+
+  const berkasRefs = (body.berkas as BerkasUploadRef[] | undefined) ?? [];
+  const pathMap = berkasRefs.length
+    ? await attachTempUploadsToPengajuan(
+        berkasRefs.map((b) => b.uploadId),
+        pengajuanId,
+      )
+    : {};
+
+  const berkas: BerkasPengajuan[] = berkasRefs.map((ref) => ({
+    id: ref.uploadId,
+    jenis: ref.jenis,
+    namaFile: ref.namaFile,
+    mimeType: ref.mimeType,
+    path: pathMap[ref.uploadId] ?? `temp/${ref.uploadId}`,
+    uploadedAt: now,
+  }));
 
   const baru: PengajuanSurat = {
-    id: createId(),
+    id: pengajuanId,
     jenisSurat: body.jenisSurat as JenisSurat,
     namaPemohon: body.namaPemohon ?? "",
     nik: body.nik ?? "",
@@ -39,6 +68,7 @@ export async function POST(request: Request) {
     keperluan: body.keperluan ?? "",
     tanggalAjuan: new Date().toISOString().slice(0, 10),
     status: "diajukan",
+    berkas,
   };
 
   data.unshift(baru);
@@ -50,11 +80,20 @@ export async function POST(request: Request) {
     message: formatPengajuanNotification(baru.namaPemohon, baru.jenisSurat, baru.id),
   });
 
+  await createNotifikasi({
+    tipe: "pengajuan",
+    judul: "Pengajuan surat baru",
+    pesan: `${baru.namaPemohon} mengajukan surat ${baru.jenisSurat}.`,
+    href: "/admin/pengajuan",
+    level: "info",
+    meta: { pengajuanId: baru.id, jenisSurat: baru.jenisSurat },
+  });
+
   return NextResponse.json(baru, { status: 201 });
 }
 
 export async function PATCH(request: Request) {
-  const auth = await requireSession();
+  const auth = await requirePermission("pengajuan:manage");
   if (auth.error) return auth.error;
 
   const body = await request.json();

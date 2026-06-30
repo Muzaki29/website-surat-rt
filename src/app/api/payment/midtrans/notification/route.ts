@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createId } from "@/lib/id";
+import { createNotifikasi } from "@/lib/notifikasi";
+import { formatRupiah } from "@/lib/format";
+import { verifyMidtransNotification } from "@/lib/midtrans";
 import { readJson, writeJson } from "@/lib/storage";
 import type { TagihanIuran, TransaksiKas } from "@/lib/types";
 
@@ -8,6 +11,10 @@ export async function POST(request: Request) {
   const body = await request.json();
   const orderId = body.order_id as string | undefined;
   const status = body.transaction_status as string | undefined;
+
+  if (!verifyMidtransNotification(body as Record<string, string>)) {
+    return NextResponse.json({ error: "Signature tidak valid" }, { status: 403 });
+  }
 
   if (!orderId) {
     return NextResponse.json({ error: "order_id wajib" }, { status: 400 });
@@ -34,7 +41,7 @@ export async function POST(request: Request) {
       tagihan[index] = {
         ...tagihan[index],
         status: "lunas",
-        metodePembayaran: "transfer-bank",
+        metodePembayaran: "midtrans",
         kodeReferensi: orderId,
         tanggalBayar: new Date().toISOString().slice(0, 10),
       };
@@ -51,6 +58,15 @@ export async function POST(request: Request) {
 
       await writeJson("iuran.json", tagihan);
       await writeJson("kas.json", kas);
+
+      await createNotifikasi({
+        tipe: "pembayaran",
+        judul: "Pembayaran Midtrans lunas",
+        pesan: `${tagihan[index].wargaNama} — ${formatRupiah(tagihan[index].nominal)} (${tagihan[index].periode}) dibayar via Midtrans. Order: ${orderId}`,
+        href: "/admin/iuran",
+        level: "success",
+        meta: { tagihanId: tagihan[index].id, orderId },
+      });
     }
   }
 

@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/db";
 import type {
+  BerkasPengajuan,
   PengajuanSurat,
   Pengumuman,
   SuratKeluar,
@@ -30,6 +31,7 @@ function mapWarga(rows: Awaited<ReturnType<typeof prisma.warga.findMany>>): Warg
     id: r.id,
     nama: r.nama,
     nik: r.nik,
+    noKk: r.noKk ?? "",
     alamat: r.alamat,
     noHp: r.noHp,
     status: r.status as Warga["status"],
@@ -70,7 +72,22 @@ function mapPengajuan(rows: Awaited<ReturnType<typeof prisma.pengajuanSurat.find
     keperluan: r.keperluan,
     tanggalAjuan: r.tanggalAjuan,
     status: r.status as PengajuanSurat["status"],
+    berkas: parseBerkasJson(r.berkasJson),
   }));
+}
+
+function parseBerkasJson(json: string | null | undefined): BerkasPengajuan[] {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json) as BerkasPengajuan[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function serializeBerkas(berkas?: BerkasPengajuan[]): string {
+  return JSON.stringify(berkas ?? []);
 }
 
 function mapTagihan(rows: Awaited<ReturnType<typeof prisma.tagihanIuran.findMany>>): TagihanIuran[] {
@@ -181,6 +198,7 @@ export async function writeJson<T>(filename: string, data: T): Promise<void> {
             id: w.id,
             nama: w.nama,
             nik: w.nik,
+            noKk: w.noKk ?? "",
             alamat: w.alamat,
             noHp: w.noHp,
             status: w.status,
@@ -239,6 +257,7 @@ export async function writeJson<T>(filename: string, data: T): Promise<void> {
             keperluan: p.keperluan,
             tanggalAjuan: p.tanggalAjuan,
             status: p.status,
+            berkasJson: serializeBerkas(p.berkas),
           })),
         }),
       ]);

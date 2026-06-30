@@ -22,11 +22,24 @@ model Warga {
   id           String @id
   nama         String
   nik          String @unique
+  noKk         String @default("")
   alamat       String
   noHp         String
   status       String
   tanggalMasuk String
   userId       String? @unique
+}
+
+model Notifikasi {
+  id        String  @id
+  tipe      String
+  judul     String
+  pesan     String
+  href      String?
+  level     String  @default("info")
+  dibaca    Boolean @default(false)
+  createdAt String
+  metaJson  String  @default("{}")
 }
 
 model ForumThread {
@@ -88,6 +101,7 @@ model PengajuanSurat {
   keperluan    String
   tanggalAjuan String
   status       String
+  berkasJson   String @default("[]")
 }
 
 model TagihanIuran {

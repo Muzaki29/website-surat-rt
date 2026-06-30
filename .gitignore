@@ -43,6 +43,7 @@ next-env.d.ts
 
 # local JSON database (RT data — backup separately)
 /data/db/*.json
+/data/uploads/
 
 # prisma sqlite
 /prisma/dev.db

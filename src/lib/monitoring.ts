@@ -27,6 +27,9 @@ export interface MonitoringData {
     tagihanBelumBayar: number;
     tiketTerbuka: number;
     saldoKas: number;
+    pembayaranQris: number;
+    pembayaranTransfer: number;
+    pembayaranTunai: number;
   };
   aktivitasTerbaru: { waktu: string; kegiatan: string; tipe: string }[];
 }
@@ -45,6 +48,15 @@ export async function getMonitoringData(): Promise<MonitoringData> {
     (p) => p.status === "diajukan" || p.status === "diproses",
   ).length;
   const pembayaranMenunggu = tagihan.filter((t) => t.status === "menunggu-konfirmasi").length;
+  const pembayaranQris = tagihan.filter(
+    (t) => t.status === "menunggu-konfirmasi" && t.metodePembayaran === "qris",
+  ).length;
+  const pembayaranTransfer = tagihan.filter(
+    (t) => t.status === "menunggu-konfirmasi" && t.metodePembayaran === "transfer-bank",
+  ).length;
+  const pembayaranTunai = tagihan.filter(
+    (t) => t.status === "menunggu-konfirmasi" && t.metodePembayaran === "tunai",
+  ).length;
   const tagihanBelumBayar = tagihan.filter((t) => t.status === "belum-bayar").length;
   const tiketTerbuka = tiket.filter((t) => t.status === "terbuka" || t.status === "diproses").length;
   const saldoKas = kas.reduce(
@@ -109,7 +121,7 @@ export async function getMonitoringData(): Promise<MonitoringData> {
       .slice(0, 2)
       .map((t) => ({
         waktu: t.tanggalAjuanBayar ?? t.periode,
-        kegiatan: `Bayar iuran — ${t.wargaNama}`,
+        kegiatan: `Bayar iuran — ${t.wargaNama} (${t.metodePembayaran ?? "manual"})`,
         tipe: "pembayaran",
       })),
     ...suratKeluar.slice(0, 2).map((s) => ({
@@ -134,6 +146,9 @@ export async function getMonitoringData(): Promise<MonitoringData> {
       tagihanBelumBayar,
       tiketTerbuka,
       saldoKas,
+      pembayaranQris,
+      pembayaranTransfer,
+      pembayaranTunai,
     },
     aktivitasTerbaru,
   };

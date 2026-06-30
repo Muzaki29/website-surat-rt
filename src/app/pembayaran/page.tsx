@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { CreditCard, Search } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { CreditCard, LogIn } from "lucide-react";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { REKENING_RT } from "@/lib/constants";
@@ -12,7 +13,7 @@ import { formatRupiah } from "@/lib/format";
 import type { MetodePembayaran, TagihanIuran, Warga } from "@/lib/types";
 
 export default function PembayaranPage() {
-  const [nik, setNik] = useState("");
+  const { data: session, status } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [warga, setWarga] = useState<Warga | null>(null);
@@ -23,6 +24,27 @@ export default function PembayaranPage() {
   const [catatan, setCatatan] = useState("");
   const [success, setSuccess] = useState(false);
   const [midtransLoading, setMidtransLoading] = useState(false);
+
+  const loadTagihan = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    const res = await fetch("/api/iuran?me=1");
+    if (!res.ok) {
+      setError("Gagal memuat tagihan. Pastikan akun warga sudah aktif.");
+      setLoading(false);
+      return;
+    }
+    const data = await res.json();
+    setWarga(data.warga);
+    setTagihan(data.tagihan.filter((t: TagihanIuran) => t.status === "belum-bayar"));
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (session?.user?.role === "warga") {
+      loadTagihan();
+    }
+  }, [session, loadTagihan]);
 
   async function handleMidtransPay() {
     if (!selectedId) return;
@@ -89,26 +111,6 @@ export default function PembayaranPage() {
     }
   }
 
-  async function handleCari(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setWarga(null);
-    setTagihan([]);
-    setSuccess(false);
-
-    const res = await fetch(`/api/iuran?nik=${encodeURIComponent(nik.trim())}`);
-    if (!res.ok) {
-      setError("NIK tidak ditemukan di data warga RT.");
-      setLoading(false);
-      return;
-    }
-    const data = await res.json();
-    setWarga(data.warga);
-    setTagihan(data.tagihan.filter((t: TagihanIuran) => t.status === "belum-bayar"));
-    setLoading(false);
-  }
-
   async function handleBayar(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedId) return;
@@ -137,6 +139,7 @@ export default function PembayaranPage() {
   }
 
   const selected = tagihan.find((t) => t.id === selectedId);
+  const isWarga = session?.user?.role === "warga";
 
   return (
     <>
@@ -146,38 +149,45 @@ export default function PembayaranPage() {
           <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
             <h1 className="text-3xl font-bold tracking-tight">Bayar Iuran RT</h1>
             <p className="mt-2 text-[var(--color-text-muted)]">
-              Cek tagihan via NIK, transfer, lalu submit bukti — Bendahara RT akan konfirmasi.
+              Masuk sebagai warga untuk melihat tagihan Anda. Pembayaran dilindungi akun pribadi.
             </p>
           </div>
         </div>
 
         <div className="mx-auto max-w-3xl space-y-6 px-4 py-10 sm:px-6">
-          <form onSubmit={handleCari} className="flex flex-col gap-3 sm:flex-row">
-            <div className="flex-1">
-              <Input
-                label="NIK Warga"
-                value={nik}
-                onChange={(e) => setNik(e.target.value)}
-                placeholder="16 digit NIK"
-                maxLength={16}
-                required
-              />
+          {status === "loading" && (
+            <p className="text-sm text-[var(--color-text-muted)]">Memeriksa sesi...</p>
+          )}
+
+          {status !== "loading" && !isWarga && (
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center">
+              <LogIn className="mx-auto h-10 w-10 text-[var(--color-text-subtle)]" />
+              <p className="mt-3 font-medium">Login diperlukan</p>
+              <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                Untuk keamanan data, tagihan hanya dapat diakses setelah login sebagai warga terdaftar.
+              </p>
+              <Link href="/login?callbackUrl=/pembayaran" className="mt-4 inline-block">
+                <Button type="button">
+                  <LogIn className="h-4 w-4" />
+                  Masuk ke Akun Warga
+                </Button>
+              </Link>
             </div>
-            <Button type="submit" disabled={loading} className="sm:mt-7">
-              <Search className="h-4 w-4" />
-              Cari Tagihan
-            </Button>
-          </form>
+          )}
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {isWarga && loading && !warga && (
+            <p className="text-sm text-[var(--color-text-muted)]">Memuat tagihan...</p>
+          )}
 
-          {success && (
+          {isWarga && error && <p className="text-sm text-red-600">{error}</p>}
+
+          {isWarga && success && (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-6 text-sm text-emerald-900">
               Bukti pembayaran terkirim. Status: menunggu konfirmasi Bendahara RT (1×24 jam).
             </div>
           )}
 
-          {warga && !success && (
+          {isWarga && warga && !success && (
             <>
               <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
                 <p className="text-sm text-[var(--color-text-muted)]">Warga</p>

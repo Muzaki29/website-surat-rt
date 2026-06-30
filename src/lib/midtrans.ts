@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createId } from "@/lib/id";
 
 const SERVER_KEY = process.env.MIDTRANS_SERVER_KEY ?? "";
@@ -60,4 +61,22 @@ export async function createSnapToken(payload: MidtransSnapPayload): Promise<str
 
 export function buildOrderId(tagihanId: string): string {
   return `IURAN-${tagihanId.slice(0, 8)}-${createId().slice(0, 6)}`.toUpperCase();
+}
+
+export function verifyMidtransNotification(body: Record<string, string>): boolean {
+  const serverKey = process.env.MIDTRANS_SERVER_KEY ?? "";
+  if (!serverKey) return false;
+
+  const orderId = body.order_id;
+  const statusCode = body.status_code;
+  const grossAmount = body.gross_amount;
+  const signatureKey = body.signature_key;
+
+  if (!orderId || !statusCode || !grossAmount || !signatureKey) return false;
+
+  const hash = createHash("sha512")
+    .update(`${orderId}${statusCode}${grossAmount}${serverKey}`)
+    .digest("hex");
+
+  return hash === signatureKey;
 }

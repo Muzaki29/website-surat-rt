@@ -1,7 +1,9 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { isValidNoKk } from "@/lib/keluarga";
 import { createId } from "@/lib/id";
+import { createNotifikasi } from "@/lib/notifikasi";
 
 function isValidNik(nik: string): boolean {
   return /^\d{16}$/.test(nik);
@@ -14,15 +16,26 @@ function isValidPhone(phone: string): boolean {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { nama, nik, alamat, noHp, password, confirmPassword } = body;
+    const { nama, nik, noKk, alamat, noHp, password, confirmPassword, agreedToTerms } = body;
     const email = (body.email as string | undefined)?.trim() || `${nik}@warga.suratrt.local`;
 
-    if (!nama?.trim() || !nik || !alamat?.trim() || !noHp || !password) {
+    if (!agreedToTerms) {
+      return NextResponse.json(
+        { error: "Anda harus menyetujui Syarat & Ketentuan." },
+        { status: 400 },
+      );
+    }
+
+    if (!nama?.trim() || !nik || !noKk || !alamat?.trim() || !noHp || !password) {
       return NextResponse.json({ error: "Semua field wajib diisi." }, { status: 400 });
     }
 
     if (!isValidNik(nik)) {
       return NextResponse.json({ error: "NIK harus 16 digit angka." }, { status: 400 });
+    }
+
+    if (!isValidNoKk(noKk)) {
+      return NextResponse.json({ error: "Nomor KK harus 16 digit angka." }, { status: 400 });
     }
 
     if (!isValidPhone(noHp)) {
@@ -36,6 +49,8 @@ export async function POST(request: Request) {
     if (password !== confirmPassword) {
       return NextResponse.json({ error: "Konfirmasi kata sandi tidak cocok." }, { status: 400 });
     }
+
+    const kkNormalized = noKk.replace(/\s/g, "");
 
     const existingNik = await prisma.warga.findUnique({ where: { nik } });
     if (existingNik) {
@@ -52,6 +67,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "NIK sudah digunakan." }, { status: 409 });
     }
 
+    const anggotaKeluarga = await prisma.warga.findMany({ where: { noKk: kkNormalized } });
+
     const wargaId = createId();
     const userId = createId();
     const tanggal = new Date().toISOString().slice(0, 10);
@@ -63,6 +80,7 @@ export async function POST(request: Request) {
           id: wargaId,
           nama: nama.trim(),
           nik,
+          noKk: kkNormalized,
           alamat: alamat.trim(),
           noHp: noHp.replace(/\s/g, ""),
           status: "menunggu-verifikasi",
@@ -83,11 +101,26 @@ export async function POST(request: Request) {
       }),
     ]);
 
+    const keluargaInfo =
+      anggotaKeluarga.length > 0
+        ? ` Satu KK dengan: ${anggotaKeluarga.map((w) => w.nama).join(", ")}.`
+        : " KK baru di sistem.";
+
+    await createNotifikasi({
+      tipe: "pendaftaran",
+      judul: "Pendaftaran warga baru",
+      pesan: `${nama.trim()} mendaftar (KK ${kkNormalized}).${keluargaInfo}`,
+      href: "/admin/warga",
+      level: "info",
+      meta: { wargaId, nik, noKk: kkNormalized, anggotaKeluarga: anggotaKeluarga.length },
+    });
+
     return NextResponse.json(
       {
         message:
           "Pendaftaran berhasil. Akun menunggu verifikasi pengurus RT sebelum bisa masuk forum.",
         email,
+        anggotaKeluarga: anggotaKeluarga.length,
       },
       { status: 201 },
     );

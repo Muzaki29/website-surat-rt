@@ -20,6 +20,20 @@ export default async function MonitoringPage() {
         description="Pantau alert operasional RT — pengajuan, pembayaran, support, dan aktivitas terbaru."
       />
 
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "QRIS menunggu", value: data.ringkasan.pembayaranQris },
+          { label: "Transfer menunggu", value: data.ringkasan.pembayaranTransfer },
+          { label: "Tunai menunggu", value: data.ringkasan.pembayaranTunai },
+          { label: "Total pending", value: data.ringkasan.pembayaranMenunggu },
+        ].map((item) => (
+          <div key={item.label} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+            <p className="text-xs uppercase tracking-wide text-[var(--color-text-subtle)]">{item.label}</p>
+            <p className="mt-1 text-xl font-bold tabular-nums">{item.value}</p>
+          </div>
+        ))}
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {[
           { label: "Pengajuan", value: data.ringkasan.pengajuanMenunggu },

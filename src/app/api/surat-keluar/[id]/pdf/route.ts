@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requirePermission } from "@/lib/auth-api";
 import { readJson } from "@/lib/storage";
 import { generateSuratKeluarPdf } from "@/lib/pdf-surat";
 import type { SuratKeluar } from "@/lib/types";
@@ -7,6 +8,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requirePermission("surat:read");
+  if (auth.error) return auth.error;
   const { id } = await params;
   const data = await readJson<SuratKeluar[]>("surat-keluar.json", []);
   const surat = data.find((s) => s.id === id);

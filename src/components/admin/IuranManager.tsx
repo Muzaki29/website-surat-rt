@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle, Receipt, Trash2, XCircle } from "lucide-react";
+import { CheckCircle, QrCode, Receipt, Trash2, Wallet, XCircle } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import {
   BulkActionBar,
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { JENIS_IURAN } from "@/lib/constants";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { bulkDeleteRequest } from "@/lib/bulk-client";
+import { METODE_PEMBAYARAN_LABEL } from "@/lib/keluarga";
 import { formatRupiah } from "@/lib/format";
 import type { TagihanIuran } from "@/lib/types";
 
@@ -23,6 +24,8 @@ export function IuranManager() {
   const [periode, setPeriode] = useState(new Date().toISOString().slice(0, 7));
   const [jenisIuran, setJenisIuran] = useState<string>(JENIS_IURAN[0].id);
   const [generating, setGenerating] = useState(false);
+  const [filterMetode, setFilterMetode] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/iuran");
@@ -81,9 +84,26 @@ export function IuranManager() {
 
   const belumBayar = tagihan.filter((t) => t.status === "belum-bayar").length;
   const menunggu = tagihan.filter((t) => t.status === "menunggu-konfirmasi").length;
+  const qrisPending = tagihan.filter(
+    (t) => t.status === "menunggu-konfirmasi" && t.metodePembayaran === "qris",
+  ).length;
+  const transferPending = tagihan.filter(
+    (t) => t.status === "menunggu-konfirmasi" && t.metodePembayaran === "transfer-bank",
+  ).length;
+  const tunaiPending = tagihan.filter(
+    (t) => t.status === "menunggu-konfirmasi" && t.metodePembayaran === "tunai",
+  ).length;
   const totalTunggak = tagihan
     .filter((t) => t.status === "belum-bayar")
     .reduce((acc, t) => acc + t.nominal, 0);
+
+  const filtered = useMemo(() => {
+    return tagihan.filter((t) => {
+      if (filterStatus !== "all" && t.status !== filterStatus) return false;
+      if (filterMetode !== "all" && t.metodePembayaran !== filterMetode) return false;
+      return true;
+    });
+  }, [tagihan, filterMetode, filterStatus]);
 
   return (
     <div className="space-y-6">
@@ -92,11 +112,56 @@ export function IuranManager() {
         description="Terbitkan tagihan, konfirmasi pembayaran warga, otomatis catat ke Kas RT."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <StatCard label="Total Tagihan" value={String(tagihan.length)} />
         <StatCard label="Belum Bayar" value={String(belumBayar)} accent="amber" />
         <StatCard label="Menunggu Konfirmasi" value={String(menunggu)} accent="sky" />
+        <StatCard label="QRIS Pending" value={String(qrisPending)} icon={QrCode} />
+        <StatCard label="Transfer Pending" value={String(transferPending)} icon={Wallet} />
         <StatCard label="Tunggakan" value={formatRupiah(totalTunggak)} />
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {[
+          { id: "all", label: "Semua status" },
+          { id: "menunggu-konfirmasi", label: "Menunggu konfirmasi" },
+          { id: "belum-bayar", label: "Belum bayar" },
+          { id: "lunas", label: "Lunas" },
+        ].map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            onClick={() => setFilterStatus(f.id)}
+            className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium ${
+              filterStatus === f.id
+                ? "bg-blue-700 text-white"
+                : "bg-white text-slate-600 ring-1 ring-slate-200"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+        <span className="mx-1 w-px bg-slate-200" />
+        {[
+          { id: "all", label: "Semua metode" },
+          { id: "qris", label: "QRIS" },
+          { id: "transfer-bank", label: "Transfer" },
+          { id: "tunai", label: "Tunai" },
+          { id: "midtrans", label: "Midtrans" },
+        ].map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            onClick={() => setFilterMetode(f.id)}
+            className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium ${
+              filterMetode === f.id
+                ? "bg-teal-700 text-white"
+                : "bg-white text-slate-600 ring-1 ring-slate-200"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -155,6 +220,10 @@ export function IuranManager() {
             <Receipt className="mx-auto h-10 w-10 text-slate-300" />
             <p className="mt-3 text-sm text-slate-600">Belum ada tagihan. Terbitkan tagihan periode baru.</p>
           </div>
+        ) : filtered.length === 0 ? (
+          <div className="p-10 text-center">
+            <p className="text-sm text-slate-600">Tidak ada tagihan sesuai filter.</p>
+          </div>
         ) : (
           <table className="w-full text-left text-sm">
             <thead className="border-b border-slate-100 bg-slate-50 text-slate-600">
@@ -169,13 +238,14 @@ export function IuranManager() {
                 <th className="px-4 py-3 font-medium">Warga</th>
                 <th className="px-4 py-3 font-medium">Jenis</th>
                 <th className="px-4 py-3 font-medium">Periode</th>
+                <th className="px-4 py-3 font-medium">Metode</th>
                 <th className="px-4 py-3 font-medium">Nominal</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {tagihan.map((t) => (
+              {filtered.map((t) => (
                 <tr key={t.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3">
                     <BulkSelectRow
@@ -187,6 +257,15 @@ export function IuranManager() {
                   <td className="px-4 py-3 font-medium text-slate-900">{t.wargaNama}</td>
                   <td className="px-4 py-3 text-slate-600">{t.jenisIuran}</td>
                   <td className="px-4 py-3 text-slate-600">{t.periode}</td>
+                  <td className="px-4 py-3">
+                    {t.metodePembayaran ? (
+                      <span className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                        {METODE_PEMBAYARAN_LABEL[t.metodePembayaran] ?? t.metodePembayaran}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-slate-900">{formatRupiah(t.nominal)}</td>
                   <td className="px-4 py-3"><Badge status={t.status} /></td>
                   <td className="px-4 py-3">
@@ -217,6 +296,16 @@ export function IuranManager() {
                         Ref: {t.kodeReferensi}
                       </p>
                     )}
+                    {t.tanggalAjuanBayar && (
+                      <p className="mt-0.5 text-xs text-[var(--color-text-subtle)]">
+                        Diajukan: {t.tanggalAjuanBayar}
+                      </p>
+                    )}
+                    {t.catatanPembayaran && (
+                      <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                        {t.catatanPembayaran}
+                      </p>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -228,12 +317,25 @@ export function IuranManager() {
   );
 }
 
-function StatCard({ label, value, accent }: { label: string; value: string; accent?: string }) {
+function StatCard({
+  label,
+  value,
+  accent,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  accent?: string;
+  icon?: typeof Receipt;
+}) {
   const color =
     accent === "amber" ? "text-amber-700" : accent === "sky" ? "text-sky-700" : "text-slate-900";
   return (
     <div className="border-t-2 border-[var(--color-primary)]/20 pt-4">
-      <p className="text-sm text-[var(--color-text-muted)]">{label}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm text-[var(--color-text-muted)]">{label}</p>
+        {Icon && <Icon className="h-4 w-4 text-[var(--color-text-subtle)]" />}
+      </div>
       <p className={`mt-1 text-2xl font-bold tabular-nums tracking-tight ${color}`}>{value}</p>
     </div>
   );

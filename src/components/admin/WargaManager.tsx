@@ -10,12 +10,15 @@ import {
   useBulkDeleteHandler,
 } from "@/components/admin/BulkActions";
 import { Badge } from "@/components/ui/Badge";
+import { KeluargaPanel } from "@/components/admin/KeluargaPanel";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { getAnggotaKeluarga, groupWargaByKk } from "@/lib/keluarga";
 import type { StatusWarga, Warga } from "@/lib/types";
 
 const emptyForm = {
   nama: "",
   nik: "",
+  noKk: "",
   alamat: "",
   noHp: "",
   status: "aktif" as StatusWarga,
@@ -40,6 +43,11 @@ export function WargaManager() {
   }, [load]);
 
   const allIds = useMemo(() => warga.map((w) => w.id), [warga]);
+  const keluargaGroups = useMemo(() => groupWargaByKk(warga), [warga]);
+  const anggotaSama = useMemo(
+    () => (form.noKk ? getAnggotaKeluarga(warga, form.noKk, editId ?? undefined) : []),
+    [warga, form.noKk, editId],
+  );
   const bulk = useBulkSelection(allIds);
   const { deleting, handleBulkDelete } = useBulkDeleteHandler({
     resource: "warga",
@@ -60,6 +68,7 @@ export function WargaManager() {
     setForm({
       nama: w.nama,
       nik: w.nik,
+      noKk: w.noKk ?? "",
       alamat: w.alamat,
       noHp: w.noHp,
       status: w.status,
@@ -119,6 +128,8 @@ export function WargaManager() {
         </button>
       </div>
 
+      <KeluargaPanel groups={keluargaGroups} warga={warga} />
+
       {showForm && (
         <form
           onSubmit={handleSubmit}
@@ -130,11 +141,28 @@ export function WargaManager() {
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field label="Nama Lengkap" value={form.nama} onChange={(v) => setForm({ ...form, nama: v })} required />
             <Field label="NIK" value={form.nik} onChange={(v) => setForm({ ...form, nik: v })} />
+            <Field
+              label="Nomor KK"
+              value={form.noKk}
+              onChange={(v) => setForm({ ...form, noKk: v.replace(/\D/g, "") })}
+            />
             <Field label="No. HP" value={form.noHp} onChange={(v) => setForm({ ...form, noHp: v })} />
             <Field label="Tanggal Masuk" type="date" value={form.tanggalMasuk} onChange={(v) => setForm({ ...form, tanggalMasuk: v })} />
             <div className="sm:col-span-2">
               <Field label="Alamat" value={form.alamat} onChange={(v) => setForm({ ...form, alamat: v })} />
             </div>
+            {anggotaSama.length > 0 && (
+              <div className="sm:col-span-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
+                <p className="font-medium">Anggota keluarga terdaftar (KK sama):</p>
+                <ul className="mt-1 list-inside list-disc text-xs">
+                  {anggotaSama.map((a) => (
+                    <li key={a.id}>
+                      {a.nama} — {a.nik} ({a.status})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">Status</label>
               <select
@@ -188,6 +216,7 @@ export function WargaManager() {
                 </th>
                 <th className="px-4 py-3 font-medium">Nama</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">NIK</th>
+                <th className="hidden px-4 py-3 font-medium lg:table-cell">No. KK</th>
                 <th className="hidden px-4 py-3 font-medium lg:table-cell">No. HP</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Aksi</th>
@@ -208,6 +237,9 @@ export function WargaManager() {
                     <p className="text-xs text-slate-500 md:hidden">{w.nik}</p>
                   </td>
                   <td className="hidden px-4 py-3 text-slate-600 md:table-cell">{w.nik || "—"}</td>
+                  <td className="hidden px-4 py-3 font-mono text-xs text-slate-600 lg:table-cell">
+                    {w.noKk || "—"}
+                  </td>
                   <td className="hidden px-4 py-3 text-slate-600 lg:table-cell">{w.noHp || "—"}</td>
                   <td className="px-4 py-3">
                     <Badge status={w.status} />

@@ -10,6 +10,12 @@ const DEFAULT_USERS = [
     role: "admin",
   },
   {
+    email: "ketua@rt001.local",
+    name: "Ketua RT",
+    password: "ketua123",
+    role: "ketua-rt",
+  },
+  {
     email: "sekretaris@rt001.local",
     name: "Sekretaris RT",
     password: "sekretaris123",

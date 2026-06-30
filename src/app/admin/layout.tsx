@@ -17,7 +17,9 @@ import {
   Wallet,
 } from "lucide-react";
 import { SignOutButton } from "@/components/admin/SignOutButton";
-import { ADMIN_NAV_GROUPS, APP_NAME, RT_INFO } from "@/lib/constants";
+import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
+import { APP_NAME, RT_INFO } from "@/lib/constants";
+import { filterAdminNavGroups } from "@/lib/permissions";
 
 const iconMap = {
   "layout-dashboard": LayoutDashboard,
@@ -45,7 +47,9 @@ const roleLabels: Record<string, string> = {
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   const userLabel = session?.user?.name ?? "Pengurus RT";
-  const roleLabel = roleLabels[session?.user?.role ?? "admin"] ?? "Pengurus RT";
+  const role = session?.user?.role ?? "admin";
+  const roleLabel = roleLabels[role] ?? "Pengurus RT";
+  const navGroups = filterAdminNavGroups(role);
 
   return (
     <div className="flex min-h-screen bg-[var(--color-background)]">
@@ -66,7 +70,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
 
         <nav className="flex-1 overflow-y-auto p-3" aria-label="Menu admin">
-          {ADMIN_NAV_GROUPS.map((group) => (
+          {navGroups.map((group) => (
             <div key={group.label} className="mb-4">
               <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-subtle)]">
                 {group.label}
@@ -103,7 +107,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 <Menu className="h-5 w-5" />
               </summary>
               <div className="absolute left-0 top-full z-50 mt-1 max-h-[70vh] w-56 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-lg">
-                {ADMIN_NAV_GROUPS.map((group) => (
+                {navGroups.map((group) => (
                   <div key={group.label} className="mb-2">
                     <p className="px-3 py-1 text-xs font-semibold text-[var(--color-text-subtle)]">{group.label}</p>
                     {group.items.map((item) => (
@@ -117,9 +121,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </details>
             <p className="text-sm text-[var(--color-text-muted)]">Panel Admin</p>
           </div>
-          <div className="text-right">
-            <p className="text-sm font-medium">{userLabel}</p>
-            <p className="text-xs text-[var(--color-text-subtle)]">{roleLabel}</p>
+          <div className="flex items-center gap-3">
+            <AdminNotificationBell />
+            <div className="text-right">
+              <p className="text-sm font-medium">{userLabel}</p>
+              <p className="text-xs text-[var(--color-text-subtle)]">{roleLabel}</p>
+            </div>
           </div>
         </header>
 

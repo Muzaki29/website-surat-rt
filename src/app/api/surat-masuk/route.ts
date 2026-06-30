@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
+import { requirePermission } from "@/lib/auth-api";
 import { createId } from "@/lib/id";
 import { generateNomorAgenda } from "@/lib/nomor-surat";
 import { readJson, writeJson } from "@/lib/storage";
 import type { SuratMasuk } from "@/lib/types";
 
 export async function GET() {
+  const auth = await requirePermission("surat:read");
+  if (auth.error) return auth.error;
+
   const data = await readJson<SuratMasuk[]>("surat-masuk.json", []);
   return NextResponse.json(data.sort((a, b) => b.tanggalTerima.localeCompare(a.tanggalTerima)));
 }
 
 export async function POST(request: Request) {
+  const auth = await requirePermission("surat:write");
+  if (auth.error) return auth.error;
   const body = await request.json();
   const data = await readJson<SuratMasuk[]>("surat-masuk.json", []);
   const nomorAgenda = body.nomorAgenda || (await generateNomorAgenda());
@@ -29,6 +35,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const auth = await requirePermission("surat:write");
+  if (auth.error) return auth.error;
+
   const id = new URL(request.url).searchParams.get("id");
   if (!id) return NextResponse.json({ error: "ID wajib" }, { status: 400 });
   const data = await readJson<SuratMasuk[]>("surat-masuk.json", []);

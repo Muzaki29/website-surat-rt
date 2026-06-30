@@ -242,6 +242,20 @@ Semua di bawah `/admin/*` — dilindungi middleware auth (hanya peran pengurus).
 
 ## Scripts
 
+### Windows (otomatis)
+
+Double-click atau jalankan di terminal:
+
+```bat
+start.bat        # Setup + dev server (disarankan)
+start-prod.bat   # Build + server produksi
+stop.bat         # Hentikan dev server SuratRT
+```
+
+> **Port bentrok?** Jika port 3000 dipakai project lain, `start.bat` otomatis pindah ke 3001, 3002, dst. dan membuka URL yang benar. Akses **http://localhost:3001** jika 3000 sudah terpakai.
+
+### npm
+
 ```bash
 npm run dev          # Server development (port 3000)
 npm run build        # Build produksi
