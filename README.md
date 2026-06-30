@@ -23,7 +23,8 @@ Platform digital manajemen **RT 005 / RW 002 Kampung Makasar**, Jakarta Timur �
 13. [Deploy Produksi](#deploy-produksi)
 14. [Backup & Keamanan](#backup--keamanan)
 15. [Troubleshooting](#troubleshooting)
-16. [Dokumentasi Lengkap](#dokumentasi-lengkap)
+16. [Dokumentasi Teknis (SRS / SDD / STD)](#dokumentasi-teknis-srs--sdd--std)
+17. [Keamanan](#keamanan)
 
 ---
 
@@ -36,7 +37,14 @@ Platform digital manajemen **RT 005 / RW 002 Kampung Makasar**, Jakarta Timur �
 | **Komunitas** | Registrasi warga, forum diskusi, polling RT, pengumuman |
 | **Dukungan** | FAQ, tiket support ke pengurus |
 | **Admin** | Dashboard, monitoring, analitik, verifikasi warga & pengajuan |
-| **Auth** | Login NIK/email, peran warga & pengurus (NextAuth v5) |
+| **Auth** | Login NIK/email, peran warga & pengurus (NextAuth v5), lupa/reset password |
+| **Akun Warga** | Dashboard `/akun`, profil, riwayat pembayaran, unduh kwitansi PDF |
+| **Notifikasi** | Lonceng admin & warga (status pengajuan, iuran, pengumuman) |
+| **Workflow Surat** | Timeline pengajuan, catatan internal, penugasan, unduh PDF surat |
+| **Keuangan+** | Export CSV laporan iuran/kas/tunggakan, pengingat iuran otomatis (cron) |
+| **Kalender RT** | Jadwal kegiatan publik & kelola di admin |
+| **Keamanan** | RBAC per peran, rate limit login/register, audit log aktivitas sensitif |
+| **Pengurus** | Kelola akun pengurus RT, KPI prioritas Ketua RT di dashboard |
 
 ---
 
@@ -113,6 +121,10 @@ Buka [http://localhost:3000](http://localhost:3000)
 | `AUTH_URL` | Ya (prod) | URL publik, mis. `https://rt-kampung-makasar.id` |
 | `MIDTRANS_*` | Tidak | Kunci Midtrans jika pembayaran Snap aktif |
 | `WHATSAPP_*` | Tidak | API notifikasi WhatsApp (opsional) |
+| `EMAIL_*` | Tidak | Email transaksional (reset password, pengingat iuran) |
+| `CRON_SECRET` | Tidak | Secret header untuk `/api/cron/iuran-reminder` |
+| `IURAN_REMINDER_DAYS` | Tidak | Hari sebelum jatuh tempo, mis. `7,3,1` |
+| `RT_SLUG` | Tidak | Slug konfigurasi multi-RT (`rt005`) |
 
 File `.env` **jangan** di-commit ke Git.
 
@@ -125,6 +137,7 @@ Setelah `npm run db:setup`:
 | Peran | Email | Password |
 |-------|-------|----------|
 | Admin | `admin@rt001.local` | `admin123` |
+| Ketua RT | `ketua@rt001.local` | `ketua123` |
 | Sekretaris RT | `sekretaris@rt001.local` | `sekretaris123` |
 | Bendahara RT | `bendahara@rt001.local` | `bendahara123` |
 
@@ -177,6 +190,9 @@ Contoh data RT saat ini: **RT 005 / RW 002, Kampung Makasar, Kelurahan Makasar, 
 | `/polling` | Voting keputusan RT |
 | `/forum` | Diskusi antar warga |
 | `/bantuan` | FAQ & tiket support |
+| `/kalender` | Jadwal kegiatan RT |
+| `/lupa-password` | Permintaan reset kata sandi |
+| `/akun` | Dashboard warga (login wajib) |
 
 ---
 
@@ -199,6 +215,10 @@ Contoh data RT saat ini: **RT 005 / RW 002, Kampung Makasar, Kelurahan Makasar, 
 | Arsip | `/admin/arsip` | Pencarian surat terpadu |
 | Support | `/admin/support` | Balas tiket warga |
 | Monitoring & Analitik | `/admin/monitoring`, `/admin/analitik` | Ringkasan operasional |
+| Kalender | `/admin/kalender` | Jadwal rapat & kegiatan RT |
+| Laporan Keuangan | `/admin/laporan` | Export CSV iuran, kas, tunggakan |
+| Audit Log | `/admin/audit-log` | Jejak aktivitas sensitif |
+| Pengurus | `/admin/pengurus` | Kelola akun pengurus RT |
 
 ---
 
@@ -250,6 +270,7 @@ Double-click atau jalankan di terminal:
 start.bat        # Setup + dev server (disarankan)
 start-prod.bat   # Build + server produksi
 stop.bat         # Hentikan dev server SuratRT
+backup.bat       # Backup database SQLite + JSON legacy
 ```
 
 > **Port bentrok?** Jika port 3000 dipakai project lain, `start.bat` otomatis pindah ke 3001, 3002, dst. dan membuka URL yang benar. Akses **http://localhost:3001** jika 3000 sudah terpakai.
@@ -265,6 +286,7 @@ npm run db:generate  # Generate Prisma client
 npm run db:push      # Sinkronkan schema ke database
 npm run db:seed      # Seed akun demo & data awal
 npm run db:setup     # db:push + db:seed (disarankan saat setup awal)
+npm run db:backup    # Backup DB + data/json ke folder backups/
 ```
 
 ---
@@ -295,7 +317,7 @@ Panduan detail deploy, backup, dan checklist maintenance: [docs/PANDUAN-MAINTENA
 
 | Data | Lokasi | Frekuensi backup |
 |------|--------|------------------|
-| Database SQLite | `prisma/dev.db` | Mingguan (prod: harian) |
+| Database SQLite | `prisma/dev.db` | Mingguan (prod: harian) — jalankan `backup.bat` atau `npm run db:backup` |
 | Upload / JSON legacy | `data/db/*.json` | Mingguan |
 
 - Jangan commit `.env` atau database ke Git.
@@ -316,11 +338,45 @@ Panduan detail deploy, backup, dan checklist maintenance: [docs/PANDUAN-MAINTENA
 
 ---
 
+## Dokumentasi Teknis (SRS / SDD / STD)
+
+Dokumen formal untuk audit, pengembangan lanjutan, dan UAT:
+
+| Dokumen | Isi | Audiens |
+|---------|-----|---------|
+| [docs/SRS.md](docs/SRS.md) | **Spesifikasi Kebutuhan** — fitur, peran, aturan bisnis, NFR | Pengurus RT, PM, developer |
+| [docs/SDD.md](docs/SDD.md) | **Spesifikasi Desain** — arsitektur, database, API, keamanan | Developer, maintainer |
+| [docs/STD.md](docs/STD.md) | **Spesifikasi Pengujian** — skenario UAT, keamanan, kriteria rilis | QA, maintainer |
+
+---
+
+## Keamanan
+
+SuratRT menerapkan pertahanan berlapis:
+
+| Kontrol | Implementasi |
+|---------|--------------|
+| Autentikasi | NextAuth JWT, CAPTCHA login, sesi 8 jam |
+| Otorisasi | RBAC per modul admin + cek pemilik data (PDF, kwitansi, berkas) |
+| Sesi | `tokenVersion` — reset password / nonaktif pengurus memutus sesi |
+| Rate limit | Login, daftar, lupa/reset password (10x / 15 menit) |
+| API publik | Pengajuan status di-redaksi (`catatanInternal` tidak bocor) |
+| Headers | CSP, X-Frame-Options, HSTS (produksi) — `next.config.ts` |
+| Audit | Log verifikasi warga, pengajuan, iuran, pengurus |
+| Pembayaran | Verifikasi signature Midtrans webhook |
+
+**Checklist produksi:** ganti password demo, set `AUTH_SECRET`, konfigurasi `EMAIL_*`, jangan aktifkan `DEBUG_RESET`, jalankan backup rutin.
+
+---
+
 ## Dokumentasi Lengkap
 
 | Dokumen | Isi |
 |---------|-----|
 | [docs/PANDUAN-PENGGUNA.md](docs/PANDUAN-PENGGUNA.md) | Panduan lengkap warga & pengurus |
+| [docs/SRS.md](docs/SRS.md) | Spesifikasi kebutuhan perangkat lunak |
+| [docs/SDD.md](docs/SDD.md) | Spesifikasi desain & arsitektur |
+| [docs/STD.md](docs/STD.md) | Spesifikasi pengujian (UAT) |
 | [docs/PANDUAN-MAINTENANCE.md](docs/PANDUAN-MAINTENANCE.md) | Operasional, deploy, backup |
 | [docs/ALUR-BISNIS.md](docs/ALUR-BISNIS.md) | Diagram alur bisnis & status |
 | [docs/LAPORAN-TEKNOLOGI.md](docs/LAPORAN-TEKNOLOGI.md) | Arsitektur & struktur kode |

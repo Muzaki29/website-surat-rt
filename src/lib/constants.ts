@@ -71,6 +71,7 @@ export const HEADER_PRIMARY_NAV = [
 
 export const HEADER_MORE_NAV = [
   { href: "/polling", label: "Polling" },
+  { href: "/kalender", label: "Kalender" },
   { href: "/status", label: "Cek Status" },
   { href: "/bantuan", label: "Bantuan" },
 ] as const;
@@ -122,7 +123,11 @@ export const ADMIN_NAV_GROUPS = [
     items: [
       { href: "/admin/monitoring", label: "Monitoring", icon: "activity" },
       { href: "/admin/analitik", label: "Analitik", icon: "bar-chart" },
+      { href: "/admin/kalender", label: "Kalender", icon: "calendar" },
+      { href: "/admin/laporan", label: "Laporan Keuangan", icon: "download" },
       { href: "/admin/support", label: "Support & Tiket", icon: "life-buoy" },
+      { href: "/admin/audit-log", label: "Audit Log", icon: "shield" },
+      { href: "/admin/pengurus", label: "Manajemen Pengurus", icon: "user-cog" },
     ],
   },
 ] as const;

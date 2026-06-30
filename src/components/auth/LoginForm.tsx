@@ -116,6 +116,11 @@ export function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
               />
+              <p className="-mt-2 text-right text-sm">
+                <Link href="/lupa-password" className="text-[var(--color-primary)] hover:underline">
+                  Lupa kata sandi?
+                </Link>
+              </p>
 
               <MathCaptcha
                 key={captchaKey}

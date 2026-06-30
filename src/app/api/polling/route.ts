@@ -65,6 +65,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "NIK tidak valid" }, { status: 404 });
     }
 
+    const existingVote = await prisma.pollingVote.findUnique({
+      where: { pollingId_wargaId: { pollingId, wargaId: warga.id } },
+    });
+    if (existingVote) {
+      return NextResponse.json({ error: "Anda sudah memilih pada polling ini." }, { status: 409 });
+    }
+
     const opsi = JSON.parse(row.opsiJson) as PollingOpsi[];
     const index = opsi.findIndex((o) => o.id === opsiId);
     if (index === -1) {
@@ -72,10 +79,21 @@ export async function POST(request: Request) {
     }
 
     opsi[index].votes += 1;
-    await prisma.polling.update({
-      where: { id: pollingId },
-      data: { opsiJson: JSON.stringify(opsi) },
-    });
+    await prisma.$transaction([
+      prisma.polling.update({
+        where: { id: pollingId },
+        data: { opsiJson: JSON.stringify(opsi) },
+      }),
+      prisma.pollingVote.create({
+        data: {
+          id: createId(),
+          pollingId,
+          wargaId: warga.id,
+          opsiId,
+          createdAt: new Date().toISOString(),
+        },
+      }),
+    ]);
 
     return NextResponse.json(parsePolling({ ...row, opsiJson: JSON.stringify(opsi) }));
   }

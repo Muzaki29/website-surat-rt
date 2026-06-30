@@ -19,6 +19,15 @@ import type { PengajuanSurat } from "@/lib/types";
 export function PengajuanManager() {
   const [items, setItems] = useState<PengajuanSurat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [workflowId, setWorkflowId] = useState<string | null>(null);
+  const [workflow, setWorkflow] = useState({
+    status: "" as PengajuanSurat["status"] | "",
+    catatanInternal: "",
+    penugasanKe: "",
+    dokumenDiminta: "",
+    estimasiSelesai: "",
+    nomorSuratKeluar: "",
+  });
 
   const load = useCallback(async () => {
     const res = await fetch("/api/pengajuan");
@@ -46,6 +55,30 @@ export function PengajuanManager() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, status }),
     });
+    load();
+  }
+
+  function openWorkflow(p: PengajuanSurat) {
+    setWorkflowId(p.id);
+    setWorkflow({
+      status: p.status,
+      catatanInternal: p.catatanInternal ?? "",
+      penugasanKe: p.penugasanKe ?? "",
+      dokumenDiminta: p.dokumenDiminta ?? "",
+      estimasiSelesai: p.estimasiSelesai ?? "",
+      nomorSuratKeluar: p.nomorSuratKeluar ?? "",
+    });
+  }
+
+  async function saveWorkflow(e: React.FormEvent) {
+    e.preventDefault();
+    if (!workflowId) return;
+    await fetch("/api/pengajuan", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: workflowId, ...workflow }),
+    });
+    setWorkflowId(null);
     load();
   }
 
@@ -135,6 +168,9 @@ export function PengajuanManager() {
                   <td className="px-4 py-3"><Badge status={p.status} /></td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center gap-1">
+                      <Button type="button" size="sm" variant="secondary" onClick={() => openWorkflow(p)}>
+                        Kelola
+                      </Button>
                       {p.status === "diajukan" && (
                         <Button type="button" size="sm" variant="secondary" onClick={() => updateStatus(p.id, "diproses")}>
                           Proses
@@ -166,6 +202,52 @@ export function PengajuanManager() {
           </table>
         )}
       </div>
+
+      {workflowId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <form onSubmit={saveWorkflow} className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold">Kelola Pengajuan</h3>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="text-sm font-medium">Status</label>
+                <select className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={workflow.status} onChange={(e) => setWorkflow({ ...workflow, status: e.target.value as PengajuanSurat["status"] })}>
+                  <option value="diajukan">Diajukan</option>
+                  <option value="diproses">Diproses</option>
+                  <option value="disetujui">Disetujui</option>
+                  <option value="ditolak">Ditolak</option>
+                  <option value="selesai">Selesai</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Penugasan ke</label>
+                <input className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={workflow.penugasanKe} onChange={(e) => setWorkflow({ ...workflow, penugasanKe: e.target.value })} placeholder="Sekretaris / Ketua RT" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Dokumen diminta</label>
+                <textarea className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows={2} value={workflow.dokumenDiminta} onChange={(e) => setWorkflow({ ...workflow, dokumenDiminta: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Catatan internal (tidak tampil ke warga)</label>
+                <textarea className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows={2} value={workflow.catatanInternal} onChange={(e) => setWorkflow({ ...workflow, catatanInternal: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium">Estimasi selesai</label>
+                  <input type="date" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={workflow.estimasiSelesai} onChange={(e) => setWorkflow({ ...workflow, estimasiSelesai: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">No. surat keluar</label>
+                  <input className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={workflow.nomorSuratKeluar} onChange={(e) => setWorkflow({ ...workflow, nomorSuratKeluar: e.target.value })} />
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={() => setWorkflowId(null)}>Batal</Button>
+              <Button type="submit">Simpan</Button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

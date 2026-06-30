@@ -12,6 +12,7 @@ export interface WargaDashboardData {
   };
   pengajuanTerbaru: PengajuanSurat[];
   tagihan: TagihanIuran[];
+  riwayatPembayaran: TagihanIuran[];
   pengumumanTerbaru: Pengumuman[];
 }
 
@@ -62,6 +63,10 @@ export async function getWargaDashboardData(
 
   const tagihanBelumBayar = tagihan.filter((t) => t.status === "belum-bayar").length;
 
+  const riwayatPembayaran = tagihan
+    .filter((t) => t.status === "lunas" || t.status === "menunggu-konfirmasi" || t.status === "ditolak")
+    .slice(0, 8);
+
   return {
     warga,
     stats: {
@@ -72,6 +77,7 @@ export async function getWargaDashboardData(
     },
     pengajuanTerbaru: pengajuanSaya.slice(0, 5),
     tagihan: tagihan.slice(0, 5),
+    riwayatPembayaran,
     pengumumanTerbaru,
   };
 }

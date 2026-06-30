@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth-api";
+import { logAudit } from "@/lib/audit-log";
 import { readJson, writeJson } from "@/lib/storage";
 import type { StatusWarga, Warga } from "@/lib/types";
 
@@ -32,6 +33,17 @@ export async function PUT(request: Request, { params }: Props) {
   };
 
   await writeJson("warga.json", warga);
+
+  await logAudit({
+    userId: auth.session!.user.id,
+    userName: auth.session!.user.name ?? "Pengurus",
+    userRole: auth.session!.user.role,
+    action: "update",
+    resource: "warga",
+    resourceId: id,
+    detail: `Status: ${status}`,
+  });
+
   return NextResponse.json(warga[index]);
 }
 
@@ -51,6 +63,17 @@ export async function PATCH(request: Request, { params }: Props) {
 
     warga[index].status = "aktif";
     await writeJson("warga.json", warga);
+
+    await logAudit({
+      userId: auth.session!.user.id,
+      userName: auth.session!.user.name ?? "Pengurus",
+      userRole: auth.session!.user.role,
+      action: "verify",
+      resource: "warga",
+      resourceId: id,
+      detail: warga[index].nama,
+    });
+
     return NextResponse.json(warga[index]);
   }
 
@@ -70,5 +93,15 @@ export async function DELETE(_request: Request, { params }: Props) {
   }
 
   await writeJson("warga.json", filtered);
+
+  await logAudit({
+    userId: auth.session!.user.id,
+    userName: auth.session!.user.name ?? "Pengurus",
+    userRole: auth.session!.user.role,
+    action: "delete",
+    resource: "warga",
+    resourceId: id,
+  });
+
   return NextResponse.json({ ok: true });
 }

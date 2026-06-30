@@ -1,12 +1,15 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  Calendar,
   CreditCard,
   FileText,
   HelpCircle,
   MapPin,
+  Megaphone,
   MessageSquare,
   Search,
+  UserCircle,
   UserPlus,
   Vote,
 } from "lucide-react";
@@ -14,7 +17,6 @@ import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { JENIS_SURAT } from "@/data/jenis-surat";
 import {
-  APP_NAME,
   APP_TAGLINE,
   FASILITAS_SEKITAR,
   INFO_LAYANAN_KEPENDUDUKAN,
@@ -26,37 +28,57 @@ const layananWarga = [
     href: "/layanan",
     icon: FileText,
     title: "Ajukan Surat",
-    description: "Surat keterangan domisili, usaha, pengantar, dan lainnya — online.",
+    description:
+      "Formulir online, unggah berkas (OCR KTP/KK), lacak status, unduh PDF saat selesai.",
   },
   {
-    href: "/pembayaran",
-    icon: CreditCard,
-    title: "Bayar Iuran",
-    description: "Cek tagihan via NIK, transfer, atau Midtrans — konfirmasi bendahara.",
+    href: "/akun",
+    icon: UserCircle,
+    title: "Akun Warga",
+    description:
+      "Dashboard pribadi, profil, ubah kata sandi, notifikasi, dan riwayat pembayaran.",
   },
   {
     href: "/daftar",
     icon: UserPlus,
     title: "Daftar Warga",
-    description: "Registrasi mandiri NIK & telepon — diverifikasi pengurus RT.",
+    description: "Registrasi NIK & nomor KK — diverifikasi pengurus sebelum akun aktif.",
   },
   {
-    href: "/forum",
-    icon: MessageSquare,
-    title: "Forum Diskusi",
-    description: "Ngobrol antar warga setelah akun aktif.",
+    href: "/pembayaran",
+    icon: CreditCard,
+    title: "Bayar Iuran",
+    description: "Cek tagihan (login warga), transfer/QRIS/Midtrans, unduh kwitansi PDF.",
+  },
+  {
+    href: "/pengumuman",
+    icon: Megaphone,
+    title: "Pengumuman RT",
+    description: "Informasi resmi dari pengurus langsung ke notifikasi warga.",
   },
   {
     href: "/polling",
     icon: Vote,
     title: "Polling RT",
-    description: "Ikut voting keputusan bersama warga.",
+    description: "Satu suara per warga — voting keputusan bersama secara transparan.",
+  },
+  {
+    href: "/kalender",
+    icon: Calendar,
+    title: "Kalender Kegiatan",
+    description: "Jadwal rapat, kerja bakti, dan kegiatan warga RT.",
+  },
+  {
+    href: "/forum",
+    icon: MessageSquare,
+    title: "Forum Diskusi",
+    description: "Diskusi antar warga setelah akun diverifikasi dan aktif.",
   },
   {
     href: "/bantuan",
     icon: HelpCircle,
-    title: "Bantuan & FAQ",
-    description: "Pertanyaan umum dan tiket support ke pengurus.",
+    title: "Bantuan & Support",
+    description: "FAQ, lupa kata sandi, dan tiket bantuan ke pengurus RT.",
   },
 ];
 
@@ -154,7 +176,8 @@ export default function HomePage() {
               Layanan untuk Warga
             </h2>
             <p className="mt-2 text-[var(--color-text-muted)]">
-              Semua fitur di bawah untuk warga {RT_INFO.nama}. Pengurus RT masuk via menu Masuk.
+              Semua layanan digital untuk warga {RT_INFO.nama} — dari surat hingga iuran dan
+              partisipasi RT.
             </p>
           </div>
 
@@ -253,26 +276,6 @@ export default function HomePage() {
                 </li>
               ))}
             </ul>
-          </div>
-        </section>
-
-        {/* CTA pengurus — terpisah, bukan link admin di footer utama */}
-        <section className="border-t border-[var(--color-border)] bg-[var(--color-primary)] text-white">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6 px-4 py-10 sm:px-6">
-            <div>
-              <p className="text-sm text-white/80">Untuk pengurus RT</p>
-              <p className="mt-1 text-lg font-semibold">{APP_NAME} — Panel Admin</p>
-              <p className="mt-2 max-w-md text-sm text-white/85">
-                Verifikasi pengajuan, iuran, monitoring, arsip, dan data warga.
-              </p>
-            </div>
-            <Link
-              href="/login"
-              className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-[var(--color-primary)] transition-colors duration-200 hover:bg-white/90 active:scale-[0.98]"
-            >
-              Masuk Pengurus
-              <ArrowRight className="h-4 w-4" />
-            </Link>
           </div>
         </section>
       </main>

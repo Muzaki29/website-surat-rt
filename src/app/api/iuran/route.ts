@@ -8,7 +8,8 @@ import {
 } from "@/lib/auth-api";
 import { METODE_PEMBAYARAN_LABEL } from "@/lib/keluarga";
 import { createId } from "@/lib/id";
-import { createNotifikasi } from "@/lib/notifikasi";
+import { createNotifikasi, notifyWargaByWargaId } from "@/lib/notifikasi";
+import { logAudit } from "@/lib/audit-log";
 import {
   formatPembayaranNotification,
   sendWhatsAppNotification,
@@ -202,6 +203,25 @@ export async function POST(request: Request) {
       level: "success",
       meta: { tagihanId: tagihan[index].id },
     });
+
+    await notifyWargaByWargaId(tagihan[index].wargaId, {
+      tipe: "pembayaran",
+      judul: "Pembayaran iuran dikonfirmasi",
+      pesan: `Pembayaran ${tagihan[index].jenisIuran} periode ${tagihan[index].periode} telah dikonfirmasi lunas.`,
+      href: "/akun",
+      level: "success",
+    });
+
+    if (auth.session) {
+      await logAudit({
+        userId: auth.session.user.id,
+        userName: auth.session.user.name,
+        userRole: auth.session.user.role,
+        action: "konfirmasi",
+        resource: "iuran",
+        resourceId: tagihan[index].id,
+      });
+    }
 
     return NextResponse.json(tagihan[index]);
   }

@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
 import { filterAdminNavGroups, getRoleDescription } from "@/lib/permissions";
-import type { DashboardStats, PeranPengguna } from "@/lib/types";
+import type { DashboardStats, KetuaKpi, PeranPengguna } from "@/lib/types";
 
 const roleLabels: Record<string, string> = {
   admin: "Admin RT",
@@ -77,10 +77,12 @@ function statsForRole(role: PeranPengguna, stats: DashboardStats) {
 export function AdminRoleDashboard({
   role,
   stats,
+  kpi,
   accessDenied,
 }: {
   role: PeranPengguna;
   stats: DashboardStats;
+  kpi?: KetuaKpi;
   accessDenied?: boolean;
 }) {
   const cards = statsForRole(role, stats);
@@ -117,6 +119,26 @@ export function AdminRoleDashboard({
           mengubah data sensitif (NIK, KK, verifikasi akun).
         </p>
       </div>
+
+      {kpi && (role === "ketua-rt" || role === "admin") && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-5">
+          <h2 className="font-semibold text-amber-950">Prioritas Hari Ini — Ketua RT</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {[
+              { label: "Tunggakan iuran", value: kpi.tunggakanIuran, href: "/admin/iuran" },
+              { label: "Pengajuan pending", value: kpi.pengajuanMenunggu, href: "/admin/pengajuan" },
+              { label: "Warga verifikasi", value: kpi.wargaMenungguVerifikasi, href: "/admin/warga" },
+              { label: "Tiket support", value: kpi.tiketTerbuka, href: "/admin/support" },
+              { label: "Bayar pending", value: kpi.pembayaranPending, href: "/admin/monitoring" },
+            ].map((item) => (
+              <Link key={item.label} href={item.href} className="rounded-lg border border-amber-200/80 bg-white px-3 py-3 hover:shadow-sm">
+                <p className="text-xs text-amber-800">{item.label}</p>
+                <p className="mt-1 text-2xl font-bold tabular-nums text-amber-950">{item.value}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {cards.map((item) => (

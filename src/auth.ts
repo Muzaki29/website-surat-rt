@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { verifyMathCaptcha } from "@/lib/captcha";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { PeranPengguna } from "@/lib/types";
 
 declare module "next-auth" {
@@ -26,13 +27,25 @@ declare module "@auth/core/jwt" {
     role?: PeranPengguna;
     id?: string;
     wargaId?: string | null;
+    tokenVersion?: number;
+    revoked?: boolean;
   }
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 8 * 60 * 60 },
   pages: { signIn: "/login" },
+  cookies: {
+    sessionToken: {
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
   providers: [
     Credentials({
       name: "credentials",
@@ -50,6 +63,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!identifier || !password) return null;
 
+        const rl = await checkRateLimit(`login:${identifier}`);
+        if (!rl.allowed) {
+          throw new Error("Terlalu banyak percobaan login. Coba lagi nanti.");
+        }
+
         if (!captchaToken || !captchaAnswer || !verifyMathCaptcha(captchaToken, captchaAnswer)) {
           throw new Error("Captcha tidak valid atau sudah kedaluwarsa.");
         }
@@ -60,6 +78,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           },
         });
         if (!user) return null;
+
+        if (user.active === false) {
+          throw new Error("Akun dinonaktifkan. Hubungi pengurus RT.");
+        }
 
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return null;
@@ -77,20 +99,41 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           role: user.role as PeranPengguna,
           wargaId: user.wargaId,
+          tokenVersion: user.tokenVersion,
         };
       },
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.wargaId = user.wargaId;
+        token.tokenVersion = (user as { tokenVersion?: number }).tokenVersion ?? 0;
       }
+
+      if (token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { active: true, tokenVersion: true, role: true },
+        });
+        if (
+          !dbUser ||
+          dbUser.active === false ||
+          dbUser.tokenVersion !== (token.tokenVersion ?? 0)
+        ) {
+          return { ...token, revoked: true };
+        }
+        token.role = dbUser.role as PeranPengguna;
+      }
+
       return token;
     },
     session({ session, token }) {
+      if (token.revoked || !token.id) {
+        return { ...session, expires: new Date(0).toISOString() };
+      }
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = (token.role as PeranPengguna) ?? "warga";

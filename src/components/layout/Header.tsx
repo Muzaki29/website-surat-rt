@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { WargaNotificationBell } from "@/components/warga/WargaNotificationBell";
 import {
   ChevronDown,
   FileText,
@@ -181,7 +182,10 @@ export function Header() {
           {session?.user ? (
             <>
               {isWarga ? (
-                <NavLink href="/akun" label="Akun Saya" pathname={pathname} />
+                <>
+                  <WargaNotificationBell />
+                  <NavLink href="/akun" label="Akun Saya" pathname={pathname} />
+                </>
               ) : null}
               <Link
                 href={isWarga ? "/akun" : "/admin"}
@@ -219,13 +223,15 @@ export function Header() {
         </div>
 
         {/* Mobile toggle */}
-        <button
-          type="button"
-          className="ml-auto inline-flex cursor-pointer items-center justify-center rounded-lg p-2 text-[var(--color-text)] hover:bg-[var(--color-surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] lg:hidden"
-          aria-expanded={mobileOpen}
-          aria-controls="mobile-nav"
-          onClick={() => setMobileOpen((open) => !open)}
-        >
+        <div className="ml-auto flex items-center gap-1 lg:hidden">
+          {session?.user && isWarga ? <WargaNotificationBell /> : null}
+          <button
+            type="button"
+            className="inline-flex cursor-pointer items-center justify-center rounded-lg p-2 text-[var(--color-text)] hover:bg-[var(--color-surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav"
+            onClick={() => setMobileOpen((open) => !open)}
+          >
           {mobileOpen ? (
             <X className="h-6 w-6" aria-hidden="true" />
           ) : (
@@ -233,6 +239,7 @@ export function Header() {
           )}
           <span className="sr-only">{mobileOpen ? "Tutup menu" : "Buka menu"}</span>
         </button>
+        </div>
       </div>
 
       {/* Mobile panel */}

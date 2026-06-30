@@ -49,6 +49,15 @@ export interface SuratKeluar {
   status: StatusSurat;
 }
 
+export interface PengajuanTimelineEntry {
+  at: string;
+  status: string;
+  note?: string;
+  by?: string;
+  /** true = hanya tampil di panel admin, tidak di API publik */
+  internal?: boolean;
+}
+
 export interface PengajuanSurat {
   id: string;
   jenisSurat: JenisSurat;
@@ -59,6 +68,12 @@ export interface PengajuanSurat {
   tanggalAjuan: string;
   status: StatusSurat;
   berkas?: BerkasPengajuan[];
+  catatanInternal?: string;
+  penugasanKe?: string;
+  dokumenDiminta?: string;
+  estimasiSelesai?: string;
+  nomorSuratKeluar?: string;
+  timeline?: PengajuanTimelineEntry[];
 }
 
 export type JenisBerkasPengajuan = "ktp" | "kk" | "pendukung";
@@ -120,8 +135,30 @@ export interface Notifikasi {
   href?: string;
   level: "info" | "warning" | "success" | "critical";
   dibaca: boolean;
+  audience?: "admin" | "warga";
+  userId?: string;
   createdAt: string;
   meta?: Record<string, unknown>;
+}
+
+export interface KalenderKegiatan {
+  id: string;
+  judul: string;
+  deskripsi: string;
+  tanggalMulai: string;
+  tanggalSelesai?: string;
+  lokasi: string;
+  published: boolean;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface KetuaKpi {
+  tunggakanIuran: number;
+  pengajuanMenunggu: number;
+  wargaMenungguVerifikasi: number;
+  tiketTerbuka: number;
+  pembayaranPending: number;
 }
 
 export type StatusTagihan = "belum-bayar" | "menunggu-konfirmasi" | "lunas" | "ditolak";

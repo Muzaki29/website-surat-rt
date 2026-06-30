@@ -18,7 +18,10 @@ function isPublicApi(pathname: string, method: string, searchParams: URLSearchPa
     return false;
   }
   if (pathname === "/api/pengumuman" && method === "GET") return true;
-  if (pathname === "/api/polling" && method === "GET") return true;
+  if (pathname === "/api/kalender" && method === "GET") return true;
+  if (pathname === "/api/auth/forgot-password" && method === "POST") return true;
+  if (pathname === "/api/auth/reset-password" && method === "POST") return true;
+  if (pathname === "/api/cron/iuran-reminder" && method === "POST") return true;
   if (pathname === "/api/pengajuan" && method === "GET") {
     return searchParams.has("id");
   }

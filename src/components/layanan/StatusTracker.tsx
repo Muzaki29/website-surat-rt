@@ -20,7 +20,25 @@ export function StatusTracker({ data, id }: { data: PengajuanSurat; id: string }
         <h1 className="mt-1 text-2xl font-bold tracking-tight">{jenisLabel}</h1>
         <p className="mt-2 font-mono text-xs text-[var(--color-text-subtle)]">ID: {id}</p>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">Pemohon: {data.namaPemohon}</p>
+        {data.estimasiSelesai && (
+          <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+            Estimasi selesai: {data.estimasiSelesai}
+          </p>
+        )}
+        {data.dokumenDiminta && (
+          <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Dokumen tambahan diminta: {data.dokumenDiminta}
+          </p>
+        )}
         <div className="mt-4"><Badge status={data.status} /></div>
+        {["disetujui", "selesai"].includes(data.status) && (
+          <a
+            href={`/api/pengajuan/${id}/pdf`}
+            className="mt-4 inline-flex rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+          >
+            Unduh Surat (PDF)
+          </a>
+        )}
         {data.berkas && data.berkas.length > 0 && (
           <div className="mt-4 border-t border-[var(--color-border)] pt-4">
             <p className="text-sm font-medium">Berkas terlampir ({data.berkas.length})</p>

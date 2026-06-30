@@ -53,7 +53,7 @@ export function WargaDashboard({
   data: WargaDashboardData;
   userName: string;
 }) {
-  const { warga, stats, pengajuanTerbaru, tagihan, pengumumanTerbaru } = data;
+  const { warga, stats, pengajuanTerbaru, tagihan, riwayatPembayaran, pengumumanTerbaru } = data;
 
   return (
     <>
@@ -234,6 +234,37 @@ export function WargaDashboard({
                       </p>
                     </div>
                     <Badge status={t.status} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section>
+            <h2 className="mb-4 text-lg font-semibold">Riwayat Pembayaran</h2>
+            {riwayatPembayaran.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-text-muted)]">
+                Belum ada riwayat pembayaran.
+              </div>
+            ) : (
+              <div className="divide-y divide-[var(--color-border)] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+                {riwayatPembayaran.map((t) => (
+                  <div key={t.id} className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium">{t.jenisIuran} — {t.periode}</p>
+                      <p className="text-sm text-[var(--color-text-muted)]">{formatRupiah(t.nominal)}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge status={t.status} />
+                      {t.status === "lunas" && (
+                        <a
+                          href={`/api/iuran/${t.id}/kwitansi`}
+                          className="text-xs font-medium text-[var(--color-primary)] hover:underline"
+                        >
+                          Kwitansi PDF
+                        </a>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

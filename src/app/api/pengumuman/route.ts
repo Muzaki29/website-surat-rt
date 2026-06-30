@@ -40,6 +40,12 @@ export async function POST(request: Request) {
 
   pengumuman.unshift(baru);
   await writeJson("pengumuman.json", pengumuman);
+
+  if (baru.published) {
+    const { broadcastPengumumanToWarga } = await import("@/lib/notifikasi");
+    await broadcastPengumumanToWarga({ judul: baru.judul, pengumumanId: baru.id });
+  }
+
   return NextResponse.json(baru, { status: 201 });
 }
 

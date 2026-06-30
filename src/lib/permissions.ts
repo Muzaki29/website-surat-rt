@@ -27,7 +27,12 @@ export type Permission =
   | "analitik:view"
   | "support:read"
   | "support:manage"
-  | "notifikasi:read";
+  | "notifikasi:read"
+  | "pengurus:manage"
+  | "kalender:read"
+  | "kalender:write"
+  | "audit:read"
+  | "laporan:read";
 
 const ALL_PERMISSIONS: Permission[] = [
   "dashboard:view",
@@ -53,6 +58,11 @@ const ALL_PERMISSIONS: Permission[] = [
   "support:read",
   "support:manage",
   "notifikasi:read",
+  "pengurus:manage",
+  "kalender:read",
+  "kalender:write",
+  "audit:read",
+  "laporan:read",
 ];
 
 const ROLE_PERMISSIONS: Record<PeranPengguna, Permission[]> = {
@@ -77,6 +87,8 @@ const ROLE_PERMISSIONS: Record<PeranPengguna, Permission[]> = {
     "support:read",
     "support:manage",
     "notifikasi:read",
+    "kalender:read",
+    "kalender:write",
   ],
   "bendahara-rt": [
     "dashboard:view",
@@ -89,6 +101,7 @@ const ROLE_PERMISSIONS: Record<PeranPengguna, Permission[]> = {
     "analitik:view",
     "support:read",
     "notifikasi:read",
+    "laporan:read",
   ],
   warga: [],
 };
@@ -107,6 +120,10 @@ export const ADMIN_PATH_PERMISSION: Record<string, Permission> = {
   "/admin/monitoring": "monitoring:view",
   "/admin/analitik": "analitik:view",
   "/admin/support": "support:read",
+  "/admin/pengurus": "pengurus:manage",
+  "/admin/kalender": "kalender:read",
+  "/admin/audit-log": "audit:read",
+  "/admin/laporan": "laporan:read",
 };
 
 export const BULK_RESOURCE_PERMISSION: Record<string, Permission> = {

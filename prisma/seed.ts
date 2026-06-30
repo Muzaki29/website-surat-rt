@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { RT_INFO } from "@/lib/constants";
 import { importLegacyJsonIfEmpty } from "@/lib/storage";
 
 const DEFAULT_USERS = [
@@ -47,6 +48,21 @@ async function main() {
   await prisma.suratCounter.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", keluar: 0, masuk: 0 },
+    update: {},
+  });
+
+  await prisma.rtConfig.upsert({
+    where: { id: "default" },
+    create: {
+      id: "default",
+      slug: process.env.RT_SLUG ?? "rt005",
+      nama: RT_INFO.nama,
+      configJson: JSON.stringify({
+        telepon: RT_INFO.telepon,
+        email: RT_INFO.email,
+        alamat: RT_INFO.alamat,
+      }),
+    },
     update: {},
   });
 

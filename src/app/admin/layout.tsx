@@ -4,6 +4,8 @@ import {
   Activity,
   Archive,
   BarChart3,
+  Calendar,
+  Download,
   FileInput,
   FileText,
   LayoutDashboard,
@@ -12,6 +14,8 @@ import {
   Menu,
   Receipt,
   Send,
+  Shield,
+  UserCog,
   Users,
   Vote,
   Wallet,
@@ -35,6 +39,10 @@ const iconMap = {
   activity: Activity,
   "bar-chart": BarChart3,
   "life-buoy": LifeBuoy,
+  calendar: Calendar,
+  download: Download,
+  shield: Shield,
+  "user-cog": UserCog,
 } as const;
 
 const roleLabels: Record<string, string> = {

@@ -62,6 +62,16 @@ function mapSuratKeluar(rows: Awaited<ReturnType<typeof prisma.suratKeluar.findM
   }));
 }
 
+function parseTimelineJson(json: string | null | undefined): PengajuanSurat["timeline"] {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json) as PengajuanSurat["timeline"];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function mapPengajuan(rows: Awaited<ReturnType<typeof prisma.pengajuanSurat.findMany>>): PengajuanSurat[] {
   return rows.map((r) => ({
     id: r.id,
@@ -73,6 +83,12 @@ function mapPengajuan(rows: Awaited<ReturnType<typeof prisma.pengajuanSurat.find
     tanggalAjuan: r.tanggalAjuan,
     status: r.status as PengajuanSurat["status"],
     berkas: parseBerkasJson(r.berkasJson),
+    catatanInternal: r.catatanInternal || undefined,
+    penugasanKe: r.penugasanKe || undefined,
+    dokumenDiminta: r.dokumenDiminta || undefined,
+    estimasiSelesai: r.estimasiSelesai ?? undefined,
+    nomorSuratKeluar: r.nomorSuratKeluar ?? undefined,
+    timeline: parseTimelineJson(r.timelineJson),
   }));
 }
 
@@ -258,6 +274,12 @@ export async function writeJson<T>(filename: string, data: T): Promise<void> {
             tanggalAjuan: p.tanggalAjuan,
             status: p.status,
             berkasJson: serializeBerkas(p.berkas),
+            catatanInternal: p.catatanInternal ?? "",
+            penugasanKe: p.penugasanKe ?? "",
+            dokumenDiminta: p.dokumenDiminta ?? "",
+            estimasiSelesai: p.estimasiSelesai ?? null,
+            nomorSuratKeluar: p.nomorSuratKeluar ?? null,
+            timelineJson: JSON.stringify(p.timeline ?? []),
           })),
         }),
       ]);

@@ -15,6 +15,8 @@ model User {
   role      String   @default("admin")
   nik       String?  @unique
   wargaId   String?  @unique
+  active    Boolean  @default(true)
+  tokenVersion Int   @default(0)
   createdAt DateTime @default(now())
 }
 
@@ -38,8 +40,75 @@ model Notifikasi {
   href      String?
   level     String  @default("info")
   dibaca    Boolean @default(false)
+  audience  String  @default("admin")
+  userId    String?
   createdAt String
   metaJson  String  @default("{}")
+}
+
+model AuditLog {
+  id         String  @id
+  userId     String?
+  userName   String
+  userRole   String
+  action     String
+  resource   String
+  resourceId String?
+  detail     String  @default("")
+  createdAt  String
+}
+
+model PasswordResetToken {
+  id        String  @id
+  userId    String
+  token     String  @unique
+  expiresAt String
+  used      Boolean @default(false)
+}
+
+model PollingVote {
+  id        String @id
+  pollingId String
+  wargaId   String
+  opsiId    String
+  createdAt String
+
+  @@unique([pollingId, wargaId])
+}
+
+model KalenderKegiatan {
+  id             String  @id
+  judul          String
+  deskripsi      String  @default("")
+  tanggalMulai   String
+  tanggalSelesai String?
+  lokasi         String  @default("")
+  published      Boolean @default(true)
+  createdBy      String  @default("")
+  createdAt      String
+}
+
+model RtConfig {
+  id         String @id @default("default")
+  slug       String @unique @default("rt005")
+  nama       String
+  configJson String @default("{}")
+}
+
+model RateLimitBucket {
+  id          String @id
+  key         String @unique
+  count       Int    @default(0)
+  windowStart String
+}
+
+model IuranReminderLog {
+  id        String @id
+  tagihanId String
+  wargaId   String
+  sentAt    String
+
+  @@unique([tagihanId, wargaId])
 }
 
 model ForumThread {
@@ -93,15 +162,21 @@ model SuratKeluar {
 }
 
 model PengajuanSurat {
-  id           String @id
-  jenisSurat   String
-  namaPemohon  String
-  nik          String
-  alamat       String
-  keperluan    String
-  tanggalAjuan String
-  status       String
-  berkasJson   String @default("[]")
+  id               String  @id
+  jenisSurat       String
+  namaPemohon      String
+  nik              String
+  alamat           String
+  keperluan        String
+  tanggalAjuan     String
+  status           String
+  berkasJson       String  @default("[]")
+  catatanInternal  String  @default("")
+  penugasanKe      String  @default("")
+  dokumenDiminta   String  @default("")
+  estimasiSelesai  String?
+  nomorSuratKeluar String?
+  timelineJson     String  @default("[]")
 }
 
 model TagihanIuran {

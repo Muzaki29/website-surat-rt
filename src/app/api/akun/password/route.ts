@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireWarga } from "@/lib/auth-api";
+import { validatePassword } from "@/lib/security";
 
 export async function PATCH(request: Request) {
   const auth = await requireWarga();
@@ -16,11 +17,9 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Semua field kata sandi wajib diisi." }, { status: 400 });
   }
 
-  if (newPassword.length < 8) {
-    return NextResponse.json(
-      { error: "Kata sandi baru minimal 8 karakter." },
-      { status: 400 },
-    );
+  const pwCheck = validatePassword(newPassword);
+  if (!pwCheck.valid) {
+    return NextResponse.json({ error: pwCheck.error }, { status: 400 });
   }
 
   if (newPassword !== confirmPassword) {
@@ -47,7 +46,10 @@ export async function PATCH(request: Request) {
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { password: await bcrypt.hash(newPassword, 12) },
+    data: {
+      password: await bcrypt.hash(newPassword, 12),
+      tokenVersion: { increment: 1 },
+    },
   });
 
   return NextResponse.json({ message: "Kata sandi berhasil diubah." });

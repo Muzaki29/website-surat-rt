@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth-api";
 import {
-  countUnreadNotifikasi,
-  listNotifikasi,
-  markAllNotifikasiRead,
+  countUnreadAdminNotifikasi,
+  listAdminNotifikasi,
+  markAllAdminNotifikasiRead,
   markNotifikasiRead,
 } from "@/lib/notifikasi";
 
@@ -11,7 +11,10 @@ export async function GET() {
   const auth = await requirePermission("notifikasi:read");
   if (auth.error) return auth.error;
 
-  const [items, unread] = await Promise.all([listNotifikasi(40), countUnreadNotifikasi()]);
+  const [items, unread] = await Promise.all([
+    listAdminNotifikasi(40),
+    countUnreadAdminNotifikasi(),
+  ]);
   return NextResponse.json({ items, unread });
 }
 
@@ -22,7 +25,7 @@ export async function PATCH(request: Request) {
   const body = await request.json();
 
   if (body.action === "read-all") {
-    await markAllNotifikasiRead();
+    await markAllAdminNotifikasiRead();
     return NextResponse.json({ ok: true });
   }
 

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { isValidNoKk } from "@/lib/keluarga";
 import { createId } from "@/lib/id";
 import { createNotifikasi } from "@/lib/notifikasi";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { validatePassword } from "@/lib/security";
 
 function isValidNik(nik: string): boolean {
   return /^\d{16}$/.test(nik);
@@ -16,6 +18,12 @@ function isValidPhone(phone: string): boolean {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+
+    const rl = await checkRateLimit(`register:${body.nik ?? "unknown"}`);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "Terlalu banyak percobaan. Coba lagi nanti." }, { status: 429 });
+    }
+
     const { nama, nik, noKk, alamat, noHp, password, confirmPassword, agreedToTerms } = body;
     const email = (body.email as string | undefined)?.trim() || `${nik}@warga.suratrt.local`;
 
@@ -42,8 +50,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Nomor telepon tidak valid." }, { status: 400 });
     }
 
-    if (password.length < 6) {
-      return NextResponse.json({ error: "Kata sandi minimal 6 karakter." }, { status: 400 });
+    if (password.length < 8) {
+      return NextResponse.json({ error: "Kata sandi minimal 8 karakter." }, { status: 400 });
+    }
+
+    const pwCheck = validatePassword(password);
+    if (!pwCheck.valid) {
+      return NextResponse.json({ error: pwCheck.error }, { status: 400 });
     }
 
     if (password !== confirmPassword) {
